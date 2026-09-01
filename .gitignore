@@ -1,0 +1,125 @@
+# ==============================================================================
+# Global & Environment Variables
+# ==============================================================================
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+
+# ==============================================================================
+# Operating System & IDE Artifacts
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Python (whatsapp-service, nlu-recommendation, backend-api, data-pipeline, shared)
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Packaging & Distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+*.egg
+
+# Jupyter Notebooks (if used in data exploration)
+.ipynb_checkpoints/
+
+# ==============================================================================
+# Node.js / React / Next.js (web-app)
+# ==============================================================================
+web-app/node_modules/
+web-app/.pnp
+web-app/.pnp.js
+
+# Next.js build output
+web-app/.next/
+web-app/out/
+
+# Build caches & logs
+web-app/build/
+web-app/.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==============================================================================
+# Database & Migrations
+# ==============================================================================
+*.sqlite
+*.sqlite3
+*.db
+backend-api/data/
+pgdata/
+
+# ==============================================================================
+# Data Pipeline & Temporary Scrapes
+# ==============================================================================
+data-pipeline/raw_data/
+data-pipeline/temp/
+data-pipeline/downloads/
+data-pipeline/*.log
+*.tmp
+
+# Un-ignore the curated dataset explicitly
+!data-pipeline/data/nsqf_courses.csv
+
+# ==============================================================================
+# Audio & Binary Cache (Voice Pipeline / WhatsApp)
+# ==============================================================================
+whatsapp-service/audio_cache/
+whatsapp-service/temp_audio/
+*.mp3
+*.wav
+*.ogg
+*.m4a
+*.webm
+
+# ==============================================================================
+# Logs & Process IDs
+# ==============================================================================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
