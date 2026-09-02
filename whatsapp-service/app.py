@@ -97,3 +97,18 @@ def whatsapp_webhook():
         audio.export(output_path , format = "wav")
 
 
+    # SARVAM SPEECT TO TEXT (< 30 SECS FOR NOW)
+
+    def sarvam_speech_to_text(wav_path: str):
+        url = "https://api.sarvam.ai/speech-to-text"
+        headers = {"api-subscription-key" : SARVAM_API_KEY}
+        with open(wav_path , "rb") as f:
+            files = {"file" : {os.path.basename(wav_path) , f , "audio/wav"}}
+            data  = {"model" : "saaras:v3"} # detects language across india
+
+            response = requests.post(url , headers = headers , files = files , data = data)
+        response.raise_for_status()
+        result = response.json()
+        return result["transcript"] , result.get("language_code" ,"hi-IN")
+
+        
