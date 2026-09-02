@@ -133,4 +133,6 @@ def whatsapp_webhook():
         with open(save_path, "wb") as f:
         f.write(base64.b64decode(audio_base64))
 
+    # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
     
+    def get_recommendation_reply(): 
