@@ -89,5 +89,11 @@ def whatsapp_webhook():
             f.write(response.content)
 
 
+    # VOICE NOTES COMES AS .ogg , CONVERT THEM TO wav
 
-            
+    def convert_to_wav:
+        audio = AudioSegment.from_file(input_path)
+        audio = audio.set_frme_rate(16000).set_channels[1]
+        audio.export(output_path , format = "wav")
+
+
