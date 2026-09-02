@@ -111,32 +111,4 @@ def whatsapp_webhook():
         result = response.json()
         return result["transcript"] , result.get("language_code" ,"hi-IN")
 
-
-    # SARVAM TEXT TO SPEECH -- BULBUL
-
-
-    def sarvam_text_to_speech(text : str , language_code : str , save_path :  str):
-        url = "https://api.sarvam.ai/text-to-speech" , 
-        headers {
-          "api-subscription-key": SARVAM_API_KEY,
-          "Content-Type" : "application/json" , 
-        }
-        payload = {
-            "inputs" : [text] ,
-            "target_language_code" : language_code , 
-            "speaker" : "meera" , 
-            "model" : "bulbul:v2" ,
-            "speech_sample_rate" : 16000 , 
-        }
-
-
-        response = requests.post(url , headers = headers , json = payload)
-        response.raise_for_status()
-        audio_base64 = response.json()["audios"][0]
-
-        with open(save_path , "wb") as f:
-            f.write(base64.b64decode(audio_base64))
-
-
-            
-
+        
