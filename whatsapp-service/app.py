@@ -67,5 +67,3 @@ def whatsapp_webhook():
     msg.media(reply_audio_public_url)
 
     return str(resp)
-
-    
