@@ -67,3 +67,11 @@ def whatsapp_webhook():
     msg.media(reply_audio_public_url)
 
     return str(resp)
+
+
+
+    # Pre generated audio files to Sarvam by server to user
+
+    @app.route("/audio/<filename>")
+    def serve_audio(filename):
+        return send_from_directory(AUDIO_DIR , filename)
