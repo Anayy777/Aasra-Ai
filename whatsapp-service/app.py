@@ -75,3 +75,19 @@ def whatsapp_webhook():
     @app.route("/audio/<filename>")
     def serve_audio(filename):
         return send_from_directory(AUDIO_DIR , filename)
+
+    # Helper Functions : 
+
+    # DOWNLOAD TWILIO VOICE-NOTES
+
+    def download_twilio_media(media_url : str , save_path : str):
+        response = requests.get(
+            media_url , auth = (TWILIO_ACCOUNT_SID , TWILIO_AUTH_TOKEN)
+        )
+        response.raise_for_status()
+        with open(save_path , "wb") as f:
+            f.write(response.content)
+
+
+
+            
