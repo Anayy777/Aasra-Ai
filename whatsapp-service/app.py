@@ -49,14 +49,14 @@ def whatsapp_webhook():
     print(f"Tranascript ({detectedLanguage}) : {transcript}")
 
     # Reccomendation logic part
-    reply_text = get_recommendation_reply(transcript , from_number , detected_lang)
+    reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
 
     # Convert the reccomendation text to audio
 
     reply_audio_filename = "reply.wav"
     reply_audio_path = os.path.join(AUDIO_DIR , reply_audio_filename)
 
-    sarvam_text_to_speech(reply_text , detected_lang , reply_audio_path)
+    sarvam_text_to_speech(reply_text , detectedLanguage , reply_audio_path)
 
     # Reply on WhatsApp with the voice note
 
@@ -103,7 +103,7 @@ def sarvam_speech_to_text(wav_path: str):
     url = "https://api.sarvam.ai/speech-to-text"
     headers = {"api-subscription-key" : SARVAM_API_KEY}
     with open(wav_path , "rb") as f:
-        files = {"file" : {os.path.basename(wav_path) , f , "audio/wav"}}
+        files = {"file" : (os.path.basename(wav_path) , f , "audio/wav")}
         data  = {"model" : "saaras:v3"} # detects language across india
 
         response = requests.post(url , headers = headers , files = files , data = data)
