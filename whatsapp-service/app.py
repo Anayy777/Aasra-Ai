@@ -70,69 +70,69 @@ def whatsapp_webhook():
 
 
 
-    # Pre generated audio files to Sarvam by server to user
+# Pre generated audio files to Sarvam by server to user
 
-    @app.route("/audio/<filename>")
-    def serve_audio(filename):
-        return send_from_directory(AUDIO_DIR , filename)
+@app.route("/audio/<filename>")
+def serve_audio(filename):
+    return send_from_directory(AUDIO_DIR , filename)
 
-    # Helper Functions : 
+# Helper Functions : 
 
-    # DOWNLOAD TWILIO VOICE-NOTES
+# DOWNLOAD TWILIO VOICE-NOTES
 
-    def download_twilio_media(media_url : str , save_path : str):
-        response = requests.get(
-            media_url , auth = (TWILIO_ACCOUNT_SID , TWILIO_AUTH_TOKEN)
-        )
-        response.raise_for_status()
-        with open(save_path , "wb") as f:
-            f.write(response.content)
-
-
-    # VOICE NOTES COMES AS .ogg , CONVERT THEM TO wav
-
-    def convert_to_wav(input_path : str , output_path :str):
-        audio = AudioSegment.from_file(input_path)
-        audio = audio.set_frme_rate(16000).set_channels[1]
-        audio.export(output_path , format = "wav")
+def download_twilio_media(media_url : str , save_path : str):
+    response = requests.get(
+        media_url , auth = (TWILIO_ACCOUNT_SID , TWILIO_AUTH_TOKEN)
+    )
+    response.raise_for_status()
+    with open(save_path , "wb") as f:
+        f.write(response.content)
 
 
-    # SARVAM SPEECH TO TEXT (< 30 SECS FOR NOW)
+# VOICE NOTES COMES AS .ogg , CONVERT THEM TO wav
 
-    def sarvam_speech_to_text(wav_path: str):
-        url = "https://api.sarvam.ai/speech-to-text"
-        headers = {"api-subscription-key" : SARVAM_API_KEY}
-        with open(wav_path , "rb") as f:
-            files = {"file" : {os.path.basename(wav_path) , f , "audio/wav"}}
-            data  = {"model" : "saaras:v3"} # detects language across india
+def convert_to_wav(input_path : str , output_path :str):
+    audio = AudioSegment.from_file(input_path)
+    audio = audio.set_frme_rate(16000).set_channels[1]
+    audio.export(output_path , format = "wav")
 
-            response = requests.post(url , headers = headers , files = files , data = data)
-        response.raise_for_status()
-        result = response.json()
-        return result["transcript"] , result.get("language_code" ,"hi-IN")
 
-    # SARVAM TEXT TO SPEECH-- BULBUL  
+# SARVAM SPEECH TO TEXT (< 30 SECS FOR NOW)
 
-        
-    def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
-        url = "https://api.sarvam.ai/text-to-speech"
-        headers = {
-            "api-subscription-key": SARVAM_API_KEY,
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "inputs": [text],
-            "target_language_code": language_code,
-            "speaker": "meera",
-            "model": "bulbul:v2",
-            "speech_sample_rate": 16000,
-        }
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        audio_base64 = response.json()["audios"][0]
-        with open(save_path, "wb") as f:
-        f.write(base64.b64decode(audio_base64))
+def sarvam_speech_to_text(wav_path: str):
+    url = "https://api.sarvam.ai/speech-to-text"
+    headers = {"api-subscription-key" : SARVAM_API_KEY}
+    with open(wav_path , "rb") as f:
+        files = {"file" : {os.path.basename(wav_path) , f , "audio/wav"}}
+        data  = {"model" : "saaras:v3"} # detects language across india
 
-    # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
+        response = requests.post(url , headers = headers , files = files , data = data)
+    response.raise_for_status()
+    result = response.json()
+    return result["transcript"] , result.get("language_code" ,"hi-IN")
 
-    def get_recommendation_reply(): 
+# SARVAM TEXT TO SPEECH-- BULBUL  
+
+    
+def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
+    url = "https://api.sarvam.ai/text-to-speech"
+    headers = {
+        "api-subscription-key": SARVAM_API_KEY,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "inputs": [text],
+        "target_language_code": language_code,
+        "speaker": "meera",
+        "model": "bulbul:v2",
+        "speech_sample_rate": 16000,
+    }
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    audio_base64 = response.json()["audios"][0]
+    with open(save_path, "wb") as f:
+    f.write(base64.b64decode(audio_base64))
+
+# RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
+
+def get_recommendation_reply(): 
