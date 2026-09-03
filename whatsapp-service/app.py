@@ -91,7 +91,7 @@ def whatsapp_webhook():
 
     # VOICE NOTES COMES AS .ogg , CONVERT THEM TO wav
 
-    def convert_to_wav:
+    def convert_to_wav(input_path : str , output_path :str):
         audio = AudioSegment.from_file(input_path)
         audio = audio.set_frme_rate(16000).set_channels[1]
         audio.export(output_path , format = "wav")
@@ -134,5 +134,5 @@ def whatsapp_webhook():
         f.write(base64.b64decode(audio_base64))
 
     # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
-    
+
     def get_recommendation_reply(): 
