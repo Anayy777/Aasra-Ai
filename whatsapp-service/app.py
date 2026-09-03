@@ -131,7 +131,7 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
     response.raise_for_status()
     audio_base64 = response.json()["audios"][0]
     with open(save_path, "wb") as f:
-    f.write(base64.b64decode(audio_base64))
+        f.write(base64.b64decode(audio_base64))
 
 # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
 
