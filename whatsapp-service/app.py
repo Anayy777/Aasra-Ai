@@ -93,7 +93,7 @@ def download_twilio_media(media_url : str , save_path : str):
 
 def convert_to_wav(input_path : str , output_path :str):
     audio = AudioSegment.from_file(input_path)
-    audio = audio.set_frme_rate(16000).set_channels[1]
+    audio = audio.set_frame_rate(16000).set_channels(1)
     audio.export(output_path , format = "wav")
 
 
@@ -135,4 +135,7 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
 
 # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
 
-def get_recommendation_reply(): 
+#def get_recommendation_reply():
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
