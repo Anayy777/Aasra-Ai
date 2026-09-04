@@ -128,6 +128,8 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
         "speech_sample_rate": 16000,
     }
     response = requests.post(url, headers=headers, json=payload)
+    if not response.ok:
+        print("Sarvam error : " , response.text)
     response.raise_for_status()
     audio_base64 = response.json()["audios"][0]
     with open(save_path, "wb") as f:
