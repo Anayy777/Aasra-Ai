@@ -135,7 +135,8 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
 
 # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
 
-#def get_recommendation_reply():
+def get_recommendation_reply(transcript: str, from_number: str, language_code: str) -> str:
+    return f"I heard you say: {transcript}. Recommendations coming soon!"
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)
