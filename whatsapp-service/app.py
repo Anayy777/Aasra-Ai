@@ -52,7 +52,7 @@ def whatsapp_webhook():
     reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
 
     # Convert the reccomendation text to audio
-
+    
     reply_audio_filename = "reply.wav"
     reply_audio_path = os.path.join(AUDIO_DIR , reply_audio_filename)
 
@@ -96,6 +96,13 @@ def convert_to_wav(input_path : str , output_path :str):
     audio = audio.set_frame_rate(16000).set_channels(1)
     audio.export(output_path , format = "wav")
 
+# CONVERT WAV TO WHATSAPP SUPPORTED FORMAT (MP3)
+
+def wav_to_mp3(input_path : str , output_path : str):
+    audio = AudioSegment.from_wav(input_path)
+    audio.export(output_path , format = "mp3")
+
+
 
 # SARVAM SPEECH TO TEXT (< 30 SECS FOR NOW)
 
@@ -123,8 +130,8 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
     payload = {
         "inputs": [text],
         "target_language_code": language_code,
-        "speaker": "meera",
-        "model": "bulbul:v2",
+        "speaker": "ritu",
+        "model": "bulbul:v3",
         "speech_sample_rate": 16000,
     }
     response = requests.post(url, headers=headers, json=payload)
