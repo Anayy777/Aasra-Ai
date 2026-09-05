@@ -58,11 +58,7 @@ def whatsapp_webhook():
 
     reply_audio_filename = "reply.mp3"
     reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
-    convert_wav_to_mp3(reply_wav_path, reply_audio_path)
-
-    reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
-    msg = resp.message(reply_text)
-    msg.media(reply_audio_public_url)
+    wav_to_mp3(reply_wav_path, reply_audio_path)
 
     # Reply on WhatsApp with the voice note
 
