@@ -52,11 +52,17 @@ def whatsapp_webhook():
     reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
 
     # Convert the reccomendation text to audio
-    
-    reply_audio_filename = "reply.wav"
-    reply_audio_path = os.path.join(AUDIO_DIR , reply_audio_filename)
 
-    sarvam_text_to_speech(reply_text , detectedLanguage , reply_audio_path)
+    reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
+    sarvam_text_to_speech(reply_text, detectedLanguage, reply_wav_path)
+
+    reply_audio_filename = "reply.mp3"
+    reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
+    convert_wav_to_mp3(reply_wav_path, reply_audio_path)
+
+    reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
+    msg = resp.message(reply_text)
+    msg.media(reply_audio_public_url)
 
     # Reply on WhatsApp with the voice note
 
