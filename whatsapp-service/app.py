@@ -5,6 +5,7 @@ from flask import Flask, request, send_from_directory
 from twilio.twiml.messaging_response import MessagingResponse
 from pydub import AudioSegment
 from dotenv import load_dotenv
+import conversation as convo
 
 load_dotenv()
 
@@ -47,6 +48,53 @@ def whatsapp_webhook():
 
     transcript , detectedLanguage = sarvam_speech_to_text(wav_path) #  the audion is the input in sarvam supported format
     print(f"Tranascript ({detectedLanguage}) : {transcript}")
+
+    # CONVERSATION STATE
+
+    session = convo.getSession(from_number)
+
+    if session is None:
+        session = convo.createSession(from_number , detectedLanguage)
+
+        greeting = "Hello! I'm here to help you find training and work opportunities that suit you."
+
+        question =convo.currentQuestion(session)
+        reply_text = "f{greeting} {question}"
+
+        send_reply(resp , reply_text , session["language"])
+        return str(resp)
+        # set state
+        if(session['state'] == convo.COLLECTING):
+            field_key = convo.currentField(session)
+            session["profile"][field_key] = transcript
+
+            if(convo.is_last_step(session)):
+                session["state"] = convo.CONFIRMING
+                reply_text = convo.build_profile_summary(session["profile"])
+
+            else:
+                convo.advance_step(session)
+                reply_text = convo.currentQuestion(session)
+            
+            send_reply(resp , reply_text , session["language"])
+            return str(resp)
+
+
+        if(session['state'] == convo.CONFIRMING):
+            if convo.is_confirmation(transcript):
+                session["state"] = convo.DONE
+                reply_text = get_recommendation_reply(session["profile"], session["language"])
+                send_reply(resp, reply_text, session["language"])
+                return str(resp)
+
+            edit_field = convo.edit_profile(transcript)
+            if edit_field: # if it exists
+                session["state"] = convo.EDITING_SINGLE
+                session["editing_field"] = edit_field
+                question = dict(convo.PROFILE_STEPS)[edit_field]
+
+                send_reply(resp , question , session["language"])
+                return str(resp)
 
     # Reccomendation logic part
     reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
@@ -120,6 +168,9 @@ def sarvam_speech_to_text(wav_path: str):
     result = response.json()
     return result["transcript"] , result.get("language_code" ,"hi-IN")
 
+
+def send_reply(resp : str , response : str , language_code : str):
+    return
 # SARVAM TEXT TO SPEECH-- BULBUL  
 
     
