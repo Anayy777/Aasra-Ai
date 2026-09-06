@@ -111,4 +111,18 @@ def profile_summary(profile : dict) -> str:
   return "\n".join(lines)
 
 
-  
+def edit_profile(text : str) :
+   """Looks for an edit request like 'edit location' or 'change my name'
+    in free-form text, returns the matching field_key or None."""
+
+    text_lower = text.lower()
+    if "edit" not in text_lower and "change" not in text_lower:
+      return None 
+    for field_key , keywords in FIELD_ALIASES.item():
+      for kw in keywords:
+        if kw in text_lower:
+          return field_key
+
+   return None
+   
+          
