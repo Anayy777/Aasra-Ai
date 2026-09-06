@@ -62,4 +62,6 @@ def createSession(phone_no : str , language_code : str):
   SESSION[phone_no] = sessions
   return sessions
 
-  
+
+def resetSession(phone_no : str):
+  SESSION.pop(phone_no , None)
