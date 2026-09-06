@@ -52,16 +52,25 @@ def createSession(phone_no : str , language_code : str):
   """
     Start a fresh session
   """
-  sessions = {
+  session = {
     "language": language_code,
     "state": COLLECTING,
     "step_index": 0,
     "profile": {},
     "editing_field": None,
   }
-  SESSION[phone_no] = sessions
-  return sessions
+  SESSION[phone_no] = session
+  return session
 
 
 def resetSession(phone_no : str):
   SESSION.pop(phone_no , None)
+
+
+def curerntQuestion(session) -> str : 
+
+  field_key , question = PROFILE_STEPS[session["step_index"]]
+  return question
+
+  
+
