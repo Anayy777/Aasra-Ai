@@ -39,4 +39,11 @@ EDITING = "EDITING"
 DONE = "DONE"
 
 
+SESSION = {} # to store information
 
+def getSession(phone_no):
+  """
+    returns the existing conversation for this number , otherwise None if its a new conversation
+  """
+
+  return SESSION.get(phone_no)
