@@ -83,3 +83,9 @@ def currentField(session) -> str:
 
 def is_last_step(session) -> bool:
   return session["step_index"] >= len(PROFILE_STEPS) - 1
+
+
+def advance_step(session):
+  session["step_index"] += 1
+
+  
