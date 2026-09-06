@@ -104,27 +104,23 @@ def profile_summary(profile : dict) -> str:
    } 
 
    for field_key , _ in PROFILE_STEPS:
-    value = profile.get(field_key , "-")
-    lines.append(f"{labels[field_key]} : {value}")
+      value = profile.get(field_key , "-")
+      lines.append(f"{labels[field_key]} : {value}")
    lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
                   "field you want to change, e.g. 'edit location'.)")
-return "\n".join(lines)
+   return "\n".join(lines)
 
-
-def edit_profile(text : str) :
-   """Looks for an edit request like 'edit location' or 'change my name'
+def edit_profile(text: str):
+    """Looks for an edit request like 'edit location' or 'change my name'
     in free-form text, returns the matching field_key or None."""
-
     text_lower = text.lower()
     if "edit" not in text_lower and "change" not in text_lower:
-      return None 
-    for field_key , keywords in FIELD_ALIASES.item():
-      for kw in keywords:
-        if kw in text_lower:
-          return field_key
-
-   return None
-
+        return None
+    for field_key, keywords in FIELD_ALIASES.items():
+        for kw in keywords:
+            if kw in text_lower:
+                return field_key
+    return None
 
 
 def is_confirmation(text: str) -> bool:
