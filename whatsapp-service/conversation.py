@@ -8,13 +8,14 @@ Each WhatsApp phone number gets its own "session" that tracks:
   - the answers collected so far
 
 """
-
 PROFILE_STEPS = [
-    ("name" , "what is your name?") , 
+    ("name", "What is your name?"),
     ("location", "Which village, town or district do you live in?"),
     ("education", "What is your educational background?"),
-    ("current_livelihood" , "What do you currently do for work , if anything?") , 
-    ("skills_interest", "What skills do you have, or what would you like to learn?"), 
+    ("family_occupation", "What work does your family traditionally do?"),
+    ("current_livelihood", "What do you currently do for work, if anything?"),
+    ("skills_interest", "What skills do you have, or what would you like to learn?"),
+    ("mobility", "Do you have any travel or physical constraints we should know about?"),
     ("employment_preference", "Would you prefer to start your own work, or work for someone else?"),
 ]
 # If the user wants to edit anything in their profile card , some reference aliases for each field 
@@ -35,7 +36,7 @@ FIELD_ALIASES = {
 
 COLLECTING = "COLLECTING"
 CONFIRMING  = "CONFIRMING"
-EDITING = "EDITING"
+EDITING_SINGLE = "EDITING_SINGLE"
 DONE = "DONE"
 
 
@@ -67,7 +68,7 @@ def resetSession(phone_no : str):
   SESSION.pop(phone_no , None)
 
 
-def curerntQuestion(session) -> str : 
+def currentQuestion(session) -> str : 
 
   field_key , question = PROFILE_STEPS[session["step_index"]]
   return question
@@ -107,7 +108,7 @@ def profile_summary(profile : dict) -> str:
       value = profile.get(field_key , "-")
       lines.append(f"{labels[field_key]} : {value}")
    lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
-                  "field you want to change, e.g. 'edit location'.)")
+                  "field you want to change, e.g. 'edit location'.")
    return "\n".join(lines)
 
 def edit_profile(text: str):
