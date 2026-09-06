@@ -88,4 +88,27 @@ def is_last_step(session) -> bool:
 def advance_step(session):
   session["step_index"] += 1
 
+def profile_summary(profile : dict) -> str:
+   """Human-readable summary shown/spoken back for confirmation."""
+
+   lines = ["Here is what is understood about you : "]
+   labels = {
+        "name": "Name",
+        "location": "Location",
+        "education": "Education",
+        "family_occupation": "Family occupation",
+        "current_livelihood": "Current work",
+        "skills_interest": "Skills/interests",
+        "mobility": "Mobility",
+        "employment_preference": "Preference",
+   } 
+
+   for field_key , _ in PROFILE_STEPS:
+    value = profile.get(field_key , "-")
+    lines.append(f"{labels[field_key]} : {value}")
+   lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
+                  "field you want to change, e.g. 'edit location'.)")
+  return "\n".join(lines)
+
+
   
