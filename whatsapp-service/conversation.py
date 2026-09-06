@@ -31,3 +31,12 @@ FIELD_ALIASES = {
     "employment_preference": ["employment", "self employment", "job preference", "self-employed", "wage"],
 }
 
+# SESSION STATES
+
+COLLECTING = "COLLECTING"
+CONFIRMING  = "CONFIRMING"
+EDITING = "EDITING"
+DONE = "DONE"
+
+
+
