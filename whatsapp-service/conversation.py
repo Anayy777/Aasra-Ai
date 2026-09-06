@@ -124,5 +124,10 @@ def edit_profile(text : str) :
           return field_key
 
    return None
-   
-          
+
+
+
+def is_confirmation(text: str) -> bool:
+    text_lower = text.lower().strip()
+    return any(word in text_lower for word in ["confirm", "yes", "correct", "haan", "sahi"])
+ 
