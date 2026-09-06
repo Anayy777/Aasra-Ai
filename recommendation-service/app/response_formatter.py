@@ -1,39 +1,101 @@
-def format_recommendation_reply(result):
+def format_recommendation_reply(
+    result,
+    language_code=None,
+):
     """
-    Convert recommendation results into a
+    Convert NQR recommendation results into a
     human-readable response.
+
+    Currently supports Hindi/Hinglish style output.
+    Language-specific response generation can be
+    expanded later.
     """
 
-    recommendations = result.get("recommendations", [])
+    recommendations = result.get(
+        "recommendations",
+        [],
+    )
 
     if not recommendations:
         return (
-            "Aapke profile ke liye abhi koi suitable "
-            "course nahi mila."
+            "Aapke profile ke liye abhi koi "
+            "suitable qualification nahi mili."
         )
 
     lines = [
-        "Aapke profile ke hisaab se ye courses suitable hain:\n"
+        "Aapke profile ke hisaab se ye qualifications "
+        "suitable hain:\n"
     ]
 
-    for index, course in enumerate(recommendations, start=1):
+    for index, qualification in enumerate(
+        recommendations,
+        start=1,
+    ):
 
-        course_name = course["course_name"]
+        title = qualification.get(
+            "qualification_title",
+            "Unknown qualification",
+        )
 
-        final_score = course["final_score"]
-        match_percentage = round(final_score * 100)
+        final_score = qualification.get(
+            "final_score",
+            0.0,
+        )
 
-        distance = course.get("distance_km")
+        match_percentage = round(
+            final_score * 100
+        )
 
-        if distance is not None:
-            distance_text = f"{distance:.1f} km"
-        else:
-            distance_text = "distance unavailable"
+        nsqf_level = qualification.get(
+            "nsqf_level"
+        )
+
+        sector = qualification.get(
+            "sector"
+        )
+
+        proposed_occupations = qualification.get(
+            "proposed_occupations",
+            [],
+        )
+
+        progression_pathway = qualification.get(
+            "progression_pathway"
+        )
 
         lines.append(
-            f"{index}. {course_name}\n"
-            f"   Match: {match_percentage}%\n"
-            f"   Distance: {distance_text}\n"
+            f"{index}. {title}"
         )
+
+        lines.append(
+            f"   Match: {match_percentage}%"
+        )
+
+        if nsqf_level is not None:
+            lines.append(
+                f"   NSQF Level: {nsqf_level}"
+            )
+
+        if sector:
+            lines.append(
+                f"   Sector: {sector}"
+            )
+
+        if proposed_occupations:
+            occupations = ", ".join(
+                proposed_occupations[:3]
+            )
+
+            lines.append(
+                f"   Related roles: {occupations}"
+            )
+
+        if progression_pathway:
+            lines.append(
+                f"   Progression: "
+                f"{progression_pathway}"
+            )
+
+        lines.append("")
 
     return "\n".join(lines)
