@@ -72,5 +72,11 @@ def curerntQuestion(session) -> str :
   field_key , question = PROFILE_STEPS[session["step_index"]]
   return question
 
-  
+
+
+
+def currentField(session) -> str:
+
+  field_key, _ = PROFILE_STEPS[session["step_index"]]
+  return field_key
 
