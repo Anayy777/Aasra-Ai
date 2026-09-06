@@ -48,12 +48,18 @@ def getSession(phone_no : str):
 
   return SESSION.get(phone_no)
 
-def createSession(phone_no : str):
+def createSession(phone_no : str , language_code : str):
   """
     Start a fresh session
   """
-  "language": language_code,
-  "state": COLLECTING,
-  "step_index": 0,
-  "profile": {},
-  "editing_field": None,
+  sessions = {
+    "language": language_code,
+    "state": COLLECTING,
+    "step_index": 0,
+    "profile": {},
+    "editing_field": None,
+  }
+  SESSION[phone_no] = sessions
+  return sessions
+
+  
