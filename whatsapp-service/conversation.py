@@ -108,7 +108,7 @@ def profile_summary(profile : dict) -> str:
     lines.append(f"{labels[field_key]} : {value}")
    lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
                   "field you want to change, e.g. 'edit location'.)")
-  return "\n".join(lines)
+return "\n".join(lines)
 
 
 def edit_profile(text : str) :
