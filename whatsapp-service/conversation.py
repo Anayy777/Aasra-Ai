@@ -41,9 +41,19 @@ DONE = "DONE"
 
 SESSION = {} # to store information
 
-def getSession(phone_no):
+def getSession(phone_no : str):
   """
     returns the existing conversation for this number , otherwise None if its a new conversation
   """
 
   return SESSION.get(phone_no)
+
+def createSession(phone_no : str):
+  """
+    Start a fresh session
+  """
+  "language": language_code,
+  "state": COLLECTING,
+  "step_index": 0,
+  "profile": {},
+  "editing_field": None,
