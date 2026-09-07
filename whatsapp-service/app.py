@@ -1,5 +1,6 @@
 import os
 import sys
+import threading    
 import base64
 import requests
 from pathlib import Path
@@ -11,7 +12,11 @@ import conversation as convo
 
 load_dotenv()
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recommendation-service"))
+# Add recommendation-service to path
+
+RECOMMENDATION_SERVICE_DIR = Path(__file__).resolve().parent.parent / "recommendation-service" / "app"
+if str(RECOMMENDATION_SERVICE_DIR) not in sys.path:
+    sys.path.insert(0, str(RECOMMENDATION_SERVICE_DIR))
  
 from app.recommender import recommend_from_profile
 from app.normalizer import normalize_profile
