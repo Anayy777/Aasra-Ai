@@ -266,7 +266,20 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
 # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
 
 def get_recommendation_reply(transcript: str, from_number: str, language_code: str) -> str:
-    return f"I heard you say: {transcript}. Recommendations coming soon!"
+    name = profile.get("name", "there")
+ 
+    beneficiary_profile = build_beneficiary_profile(profile)
+    beneficiary_profile = normalize_profile(beneficiary_profile)
+ 
+    result = recommend_from_profile(
+        profile=beneficiary_profile,
+        user_latitude=None,
+        user_longitude=None,
+        top_k=3,
+        language_code="en-IN",
+    )
+ 
+    return f"Thanks {name}!\n{result['reply']}"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
