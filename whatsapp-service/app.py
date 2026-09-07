@@ -19,8 +19,8 @@ RECOMMENDATION_SERVICE_DIR = Path(__file__).resolve().parent.parent / "recommend
 if str(RECOMMENDATION_SERVICE_DIR) not in sys.path:
     sys.path.insert(0, str(RECOMMENDATION_SERVICE_DIR))
  
-from app.recommender import recommend_from_profile
-from app.normalizer import normalize_profile
+from recommender import recommend_from_profile
+from normalizer import normalize_profile
 from profile_adapter import build_beneficiary_profile
 
 
@@ -34,119 +34,9 @@ PUBLIC_BASE_URL = os.environ["PUBLIC_BASE_URL"]
 twilio_client = Client(TWILIO_ACCOUNT_SID , TWILIO_AUTH_TOKEN)
 
 app = Flask(__name__)
-AUDIO_DIR = "audio_files"
+AUDIO_DIR = os.path.join(os.path.dirname(__file__) , "audio_files")
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
-
-# return immediate lightweight status 200 to free up request worker and do the recommendation calling and status logic in the background
-
-def process_message_async(from_number, to_number, num_media, media_url, text_body):
-    try:
-        # 1. Download audio & call Sarvam STT if voice note, else parse text_body
-        phone_clean = from_number.replace("+", "").replace("whatsapp:", "")
-        session = convo.get_session(from_number)
-
-        if num_media > 0 and media_url:
-            ogg_path = os.path.join(AUDIO_DIR, f"incoming_{phone_clean}.ogg")
-            wav_path = os.path.join(AUDIO_DIR, f"incoming_{phone_clean}.wav")
-            download_audio_from_twilio(media_url, ogg_path)
-            ogg_to_wav(ogg_path, wav_path)
-            user_input, lang_code = sarvam_speech_to_text(wav_path)
-        else:
-            user_input = text_body.strip()
-            lang_code = "hi-IN" if any("\u0900" <= c <= "\u097f" for c in user_input) else "en-IN"
-
-        # 2. Run conversation state machine / recommendations
-        if session is None:
-            session = convo.create_session(from_number, lang_code)
-            reply_text = f"Namaste! {convo.QUESTIONS[0]['en']}"
-        else:
-            # (keep your existing convo.COLLECTING, CONFIRMING, EDITING logic)
-            state = session["state"]
-            if "restart" in user_input.lower():
-                convo.reset_session(from_number)
-                session = convo.create_session(from_number, lang_code)
-                reply_text = f"Session restarted.\n\n{convo.QUESTIONS[0]['en']}"
-            elif state == convo.COLLECTING:
-                next_q, summary = convo.save_answer(session, user_input)
-                reply_text = next_q["en"] if next_q else f"Summary:\n{summary}\nSay 'confirm' or 'edit <field>'."
-            elif state == convo.CONFIRMING:
-                action, field = convo.process_confirmation(session, user_input)
-                if action == "CONFIRMED":
-                    profile_obj = to_beneficiary_profile(session["profile"], session["language"])
-                    rec = recommend_from_profile_with_fallback(profile_obj)
-                    reply_text = rec.get("reply", "No courses found.")
-                elif action == "EDIT":
-                    reply_text = f"Please provide updated {field}:"
-                else:
-                    reply_text = "Please say 'confirm' to proceed or 'edit <field>'."
-            elif state == convo.EDITING_SINGLE:
-                summary = convo.apply_edit(session, user_input)
-                reply_text = f"Updated!\n{summary}\nSay 'confirm' to proceed."
-            else:
-                reply_text = "Profile already completed. Send 'restart' to begin again."
-
-        # 3. Generate Audio with Sarvam TTS
-        reply_wav = os.path.join(AUDIO_DIR, f"reply_{phone_clean}.wav")
-        reply_mp3 = os.path.join(AUDIO_DIR, f"reply_{phone_clean}.mp3")
-        speech_text = translate_for_speech(reply_text, session.get("language", "hi-IN"))
-        sarvam_text_to_speech(speech_text, session.get("language", "hi-IN"), reply_wav)
-        wav_to_mp3(reply_wav, reply_mp3)
-
-        audio_public_url = f"{PUBLIC_BASE_URL}/audio/reply_{phone_clean}.mp3"
-
-        # 4. Dispatch replies via the new helper
-        send_whatsapp_reply(to_number=from_number, from_number=to_number, text=reply_text, audio_public_url=audio_public_url)
-
-    except Exception as e:
-        print(f"Error processing background message: {e}")
-
-@app.route("/webhook"  , methods=["POST"])
-def whatsapp_webhook():
-    from_number = request.form.get("From", "")
-    to_number = request.form.get("To", "")
-    num_media = int(request.form.get("NumMedia", 0))
-    media_url = request.form.get("MediaUrl0", "")
-    text_body = request.form.get("Body", "")
-
-    # Fire background processing so Twilio receives an instant 200 response
-    thread = threading.Thread(
-        target=process_message_async,
-        args=(from_number, to_number, num_media, media_url, text_body)
-    )
-    thread.start()
-
-    # Instant empty response to satisfy Twilio's 15s window
-    return "", 200
-    
-    # Send one bot reply as BOTH voice note (in the user's language) and English text (always English, per the design decision).
-
-
-
-
-def send_whatsapp_reply(to_number: str, from_number: str, text: str, audio_public_url: str):
-    # 1. Send the text message first
-    twilio_client.messages.create(
-        body=text,
-        from_=from_number,
-        to=to_number
-    )
-
-    # 2. Send the voice note as a separate media message
-    twilio_client.messages.create(
-        from_=from_number,
-        to=to_number,
-        media_url=[audio_public_url]
-    )
-
-
-
-
-# Pre generated audio files to Sarvam by server to user
-
-@app.route("/audio/<filename>")
-def serve_audio(filename):
-    return send_from_directory(AUDIO_DIR , filename)
 
 # Helper Functions : 
 
@@ -251,6 +141,23 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
     with open(save_path, "wb") as f:
         f.write(base64.b64decode(audio_base64))
 
+
+
+def send_whatsapp_reply(to_number: str, from_number: str, text: str, audio_public_url: str):
+    # 1. Send the text message first
+    twilio_client.messages.create(
+        body=text,
+        from_=from_number,
+        to=to_number
+    )
+
+    # 2. Send the voice note as a separate media message
+    twilio_client.messages.create(
+        from_=from_number,
+        to=to_number,
+        media_url=[audio_public_url]
+    )
+
 # RECOMMENDATION AND NLU PART , TAKE TRANSCRIPT , phone no and language and return reply text
 
 def get_recommendation_reply(profile : dict, language_code: str) -> str:
@@ -268,6 +175,97 @@ def get_recommendation_reply(profile : dict, language_code: str) -> str:
     )
  
     return f"Thanks {name}!\n{result['reply']}"
+
+# return immediate lightweight status 200 to free up request worker and do the recommendation calling and status logic in the background
+
+def process_message_async(from_number, to_number, num_media, media_url, text_body):
+    try:
+        # 1. Download audio & call Sarvam STT if voice note, else parse text_body
+        phone_clean = from_number.replace("+", "").replace("whatsapp:", "")
+        session = convo.get_session(from_number)
+
+        if num_media > 0 and media_url:
+            ogg_path = os.path.join(AUDIO_DIR, f"incoming_{phone_clean}.ogg")
+            wav_path = os.path.join(AUDIO_DIR, f"incoming_{phone_clean}.wav")
+            download_twilio_media(media_url, ogg_path)
+            convert_to_wav(ogg_path, wav_path)
+            user_input, lang_code = sarvam_speech_to_text(wav_path)
+        else:
+            user_input = text_body.strip()
+            lang_code = "hi-IN" if any("\u0900" <= c <= "\u097f" for c in user_input) else "en-IN"
+
+        # 2. Run conversation state machine / recommendations
+        if session is None:
+            session = convo.create_session(from_number, lang_code)
+            reply_text = f"Namaste! {convo.QUESTIONS[0]['en']}"
+        else:
+            # (keep your existing convo.COLLECTING, CONFIRMING, EDITING logic)
+            state = session["state"]
+            if "restart" in user_input.lower():
+                convo.reset_session(from_number)
+                session = convo.create_session(from_number, lang_code)
+                reply_text = f"Session restarted.\n\n{convo.QUESTIONS[0]['en']}"
+            elif state == convo.COLLECTING:
+                next_q, summary = convo.save_answer(session, user_input)
+                reply_text = next_q["en"] if next_q else f"Summary:\n{summary}\nSay 'confirm' or 'edit <field>'."
+            elif state == convo.CONFIRMING:
+                action, field = convo.process_confirmation(session, user_input)
+                if action == "CONFIRMED":
+                    reply_text = get_recommendation_reply(session["profile"] , session["language"])
+                elif action == "EDIT":
+                    reply_text = f"Please provide updated {field}:"
+                else:
+                    reply_text = "Please say 'confirm' to proceed or 'edit <field>'."
+            elif state == convo.EDITING_SINGLE:
+                summary = convo.apply_edit(session, user_input)
+                reply_text = f"Updated!\n{summary}\nSay 'confirm' to proceed."
+            else:
+                reply_text = "Profile already completed. Send 'restart' to begin again."
+
+        # 3. Generate Audio with Sarvam TTS
+        reply_wav = os.path.join(AUDIO_DIR, f"reply_{phone_clean}.wav")
+        reply_mp3 = os.path.join(AUDIO_DIR, f"reply_{phone_clean}.mp3")
+        speech_text = translate_for_speech(reply_text, session.get("language", "hi-IN"))
+        sarvam_text_to_speech(speech_text, session.get("language", "hi-IN"), reply_wav)
+        wav_to_mp3(reply_wav, reply_mp3)
+
+        audio_public_url = f"{PUBLIC_BASE_URL}/audio/reply_{phone_clean}.mp3"
+
+        # 4. Dispatch replies via the new helper
+        send_whatsapp_reply(to_number=from_number, from_number=to_number, text=reply_text, audio_public_url=audio_public_url)
+
+    except Exception as e:
+        print(f"Error processing background message: {e}")
+
+@app.route("/webhook"  , methods=["POST"])
+def whatsapp_webhook():
+    from_number = request.form.get("From", "")
+    to_number = request.form.get("To", "")
+    num_media = int(request.form.get("NumMedia", 0))
+    media_url = request.form.get("MediaUrl0", "")
+    text_body = request.form.get("Body", "")
+
+    # Fire background processing so Twilio receives an instant 200 response
+    thread = threading.Thread(
+        target=process_message_async,
+        args=(from_number, to_number, num_media, media_url, text_body)
+    )
+    thread.start()
+
+    # Instant empty response to satisfy Twilio's 15s window
+    return "", 200
+    
+    # Send one bot reply as BOTH voice note (in the user's language) and English text (always English, per the design decision).
+
+
+
+
+
+# Pre generated audio files to Sarvam by server to user
+
+@app.route("/audio/<filename>")
+def serve_audio(filename):
+    return send_from_directory(AUDIO_DIR , filename)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)
