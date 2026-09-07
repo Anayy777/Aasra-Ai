@@ -102,6 +102,25 @@ def whatsapp_webhook():
                 send_reply(resp , question , session["language"])
                 return str(resp)
 
+            reply_text = convo.build_profile_summary(session["profile"])
+            send_reply(resp, reply_text, session["language"])
+            return str(resp)
+        
+        if session["state"] == convo.EDITING_SINGLE:
+            field_key = session["editing_field"]
+            session["profile"][field_key] = transcript
+            session["state"] = convo.CONFIRMING
+            session["editing_field"] = None
+            reply_text = convo.build_profile_summary(session["profile"])
+            send_reply(resp , reply_text , session["language"])
+            return str(resp)
+
+        if session["state"] == convo.DONE:
+            if "RESTART" in transcript.lower():
+                convo.resetSession(from_number)
+                new_session = convo.createSession(from_number , detectedLanguage)
+                reply_text = "Sure , let's start over. " + convo.PROFILE_STEPS[0][1]
+                send_reply(resp , reply_text , new_session["language"])
     # Reccomendation logic part
     reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
 
