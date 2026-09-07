@@ -166,7 +166,35 @@ def detect_text_language(text: str) -> str:
             return "hi-IN"
     return "en-IN"
 
-    
+# translate english prompt to user lang before feeding to TTS model 
+
+def translate_for_speech(text: str, target_language_code: str) -> str:
+    if target_language_code.startswith("en"):
+        return text
+    try:
+        url = "https://api.sarvam.ai/translate"
+        headers = {
+            "api-subscription-key": SARVAM_API_KEY,
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "input": text,
+            "source_language_code": "en-IN",
+            "target_language_code": target_language_code,
+        }
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()["translated_text"]
+    except Exception as e:
+        print(f"Translation failed ({e}), falling back to English text for speech.")
+        return text
+ 
+ 
+def sanitize(phone_number: str) -> str:
+    """Turns 'whatsapp:+919876543210' into a filename-safe string."""
+    return phone_number.replace("whatsapp:", "").replace("+", "")
+ 
+
 
 # DOWNLOAD TWILIO VOICE-NOTES
 
