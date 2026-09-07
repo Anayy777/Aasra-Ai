@@ -121,27 +121,32 @@ def whatsapp_webhook():
                 new_session = convo.createSession(from_number , detectedLanguage)
                 reply_text = "Sure , let's start over. " + convo.PROFILE_STEPS[0][1]
                 send_reply(resp , reply_text , new_session["language"])
-    # Reccomendation logic part
-    reply_text = get_recommendation_reply(transcript , from_number , detectedLanguage)
-
-    # Convert the reccomendation text to audio
-
-    reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
-    sarvam_text_to_speech(reply_text, detectedLanguage, reply_wav_path)
-
-    reply_audio_filename = "reply.mp3"
-    reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
-    wav_to_mp3(reply_wav_path, reply_audio_path)
-
-    # Reply on WhatsApp with the voice note
-
-    reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
-
-    msg = resp.message(reply_text)
-
-    msg.media(reply_audio_public_url)
+            else:
+                send_reply(resp , reply_text , session["language"])
+            return str(resp)
 
     return str(resp)
+    
+    # Send one bot reply as BOTH voice note (in the user's language) and English text (always English, per the design decision).
+
+    # Convert the reccomendation text to audio
+    def send_reply(resp: MessagingResponse, english_text: str, language_code: str):
+
+        speect_text = translate_for_speech(english_text , language_code)
+        reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
+        sarvam_text_to_speech(reply_text, language_code , reply_wav_path)
+
+        reply_audio_filename = "reply.mp3"
+        reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
+        wav_to_mp3(reply_wav_path, reply_audio_path)
+
+        # Reply on WhatsApp with the voice note
+
+        reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
+        msg = resp.message(reply_text)
+
+        msg.media(reply_audio_public_url)
+
 
 
 
