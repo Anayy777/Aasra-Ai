@@ -9,6 +9,12 @@ import conversation as convo
 
 load_dotenv()
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recommendation-service"))
+ 
+from app.recommender import recommend_from_profile
+from app.normalizer import normalize_profile
+from profile_adapter import build_beneficiary_profile
+
 SARVAM_API_KEY = os.environ["SARVAM_API_KEY"]
 TWILIO_ACCOUNT_SID = os.environ["TWILIO_ACCOUNT_SID"]
 TWILIO_AUTH_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
