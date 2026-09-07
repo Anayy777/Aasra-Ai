@@ -44,10 +44,10 @@ def whatsapp_webhook():
         wav_path = os.path.join(AUDIO_DIR, f"incoming_{sanitize(from_number)}.wav")
         convert_to_wav(local_input_path, wav_path)
  
-        transcript, detected_lang = sarvam_speech_to_text(wav_path)
+        transcript, detectedLanguage = sarvam_speech_to_text(wav_path)
     else:
         transcript = request.form.get("Body", "").strip()
-        detected_lang = detect_text_language(transcript)
+        detectedLanguage = detect_text_language(transcript)
     print(f"Tranascript ({detectedLanguage}) : {transcript}")
 
     # CONVERSATION STATE
@@ -71,7 +71,7 @@ def whatsapp_webhook():
 
         if(convo.is_last_step(session)):
             session["state"] = convo.CONFIRMING
-            reply_text = convo.build_profile_summary(session["profile"])
+            reply_text = convo.profile_summary(session["profile"])
 
         else:
             convo.advance_step(session)
@@ -97,7 +97,7 @@ def whatsapp_webhook():
             send_reply(resp , question , session["language"])
             return str(resp)
 
-        reply_text = convo.build_profile_summary(session["profile"])
+        reply_text = convo.profile_summary(session["profile"])
         send_reply(resp, reply_text, session["language"])
         return str(resp)
     
@@ -106,7 +106,7 @@ def whatsapp_webhook():
         session["profile"][field_key] = transcript
         session["state"] = convo.CONFIRMING
         session["editing_field"] = None
-        reply_text = convo.build_profile_summary(session["profile"])
+        reply_text = convo.profile_summary(session["profile"])
         send_reply(resp , reply_text , session["language"])
         return str(resp)
 
@@ -117,6 +117,7 @@ def whatsapp_webhook():
             reply_text = "Sure , let's start over. " + convo.PROFILE_STEPS[0][1]
             send_reply(resp , reply_text , new_session["language"])
         else:
+            reply_text = "Your profile is already complete. Say 'restart' if you'd like to build a new one."
             send_reply(resp , reply_text , session["language"])
         return str(resp)
 
@@ -127,7 +128,7 @@ def whatsapp_webhook():
     # Convert the reccomendation text to audio
 def send_reply(resp: MessagingResponse, english_text: str, language_code: str):
 
-    speect_text = translate_for_speech(english_text , language_code)
+    speech_text = translate_for_speech(english_text , language_code)
     reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
     sarvam_text_to_speech(reply_text, language_code , reply_wav_path)
 
@@ -138,7 +139,7 @@ def send_reply(resp: MessagingResponse, english_text: str, language_code: str):
     # Reply on WhatsApp with the voice note
 
     reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
-    msg = resp.message(reply_text)
+    msg = resp.message(english_text)
 
     msg.media(reply_audio_public_url)
 
@@ -230,10 +231,6 @@ def sarvam_speech_to_text(wav_path: str):
     response.raise_for_status()
     result = response.json()
     return result["transcript"] , result.get("language_code" ,"hi-IN")
-
-
-def send_reply(resp : str , response : str , language_code : str):
-    return
 # SARVAM TEXT TO SPEECH-- BULBUL  
 
     
