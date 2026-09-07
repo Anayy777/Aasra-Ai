@@ -9,6 +9,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import conversation as convo
+from twilio.rest import Client
 
 load_dotenv()
 
@@ -22,11 +23,15 @@ from app.recommender import recommend_from_profile
 from app.normalizer import normalize_profile
 from profile_adapter import build_beneficiary_profile
 
+
+
 SARVAM_API_KEY = os.environ["SARVAM_API_KEY"]
 TWILIO_ACCOUNT_SID = os.environ["TWILIO_ACCOUNT_SID"]
 TWILIO_AUTH_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
 
 PUBLIC_BASE_URL = os.environ["PUBLIC_BASE_URL"]
+
+twilio_client = Client(TWILIO_ACCOUNT_SID , TWILIO_AUTH_TOKEN)
 
 app = Flask(__name__)
 AUDIO_DIR = "audio_files"
