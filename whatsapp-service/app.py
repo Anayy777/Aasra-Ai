@@ -111,7 +111,7 @@ def whatsapp_webhook():
         return str(resp)
 
     if session["state"] == convo.DONE:
-        if "RESTART" in transcript.lower():
+        if "restart" in transcript.lower():
             convo.resetSession(from_number)
             new_session = convo.createSession(from_number , detectedLanguage)
             reply_text = "Sure , let's start over. " + convo.PROFILE_STEPS[0][1]
@@ -130,7 +130,7 @@ def send_reply(resp: MessagingResponse, english_text: str, language_code: str):
 
     speech_text = translate_for_speech(english_text , language_code)
     reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
-    sarvam_text_to_speech(reply_text, language_code , reply_wav_path)
+    sarvam_text_to_speech(speech_text, language_code , reply_wav_path)
 
     reply_audio_filename = "reply.mp3"
     reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
