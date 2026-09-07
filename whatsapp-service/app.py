@@ -158,6 +158,16 @@ def serve_audio(filename):
 
 # Helper Functions : 
 
+# TO DETECT USER LANGUAGE
+
+def detect_text_language(text: str) -> str:
+    for ch in text:
+        if "\u0900" <= ch <= "\u097F":  # Devanagari block
+            return "hi-IN"
+    return "en-IN"
+
+    
+
 # DOWNLOAD TWILIO VOICE-NOTES
 
 def download_twilio_media(media_url : str , save_path : str):
