@@ -6,6 +6,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from pydub import AudioSegment
 from dotenv import load_dotenv
 import conversation as convo
+from database import init_db
 
 load_dotenv()
 
@@ -16,6 +17,7 @@ TWILIO_AUTH_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
 PUBLIC_BASE_URL = os.environ["PUBLIC_BASE_URL"]
 
 app = Flask(__name__)
+init_db()
 AUDIO_DIR = "audio_files"
 os.makedirs(AUDIO_DIR, exist_ok=True)
 
@@ -75,6 +77,8 @@ def whatsapp_webhook():
             else:
                 convo.advance_step(session)
                 reply_text = convo.currentQuestion(session)
+
+            convo.saveSession(from_number, session)
             
             send_reply(resp , reply_text , session["language"])
             return str(resp)
@@ -83,6 +87,7 @@ def whatsapp_webhook():
         if(session['state'] == convo.CONFIRMING):
             if convo.is_confirmation(transcript):
                 session["state"] = convo.DONE
+                convo.saveSession(from_number, session)
                 reply_text = get_recommendation_reply(session["profile"], session["language"])
                 send_reply(resp, reply_text, session["language"])
                 return str(resp)
@@ -91,6 +96,7 @@ def whatsapp_webhook():
             if edit_field: # if it exists
                 session["state"] = convo.EDITING_SINGLE
                 session["editing_field"] = edit_field
+                convo.saveSession(from_number, session)
                 question = dict(convo.PROFILE_STEPS)[edit_field]
 
                 send_reply(resp , question , session["language"])
