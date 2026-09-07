@@ -39,119 +39,38 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 
 @app.route("/webhook"  , methods=["POST"])
 def whatsapp_webhook():
-    num_media = int(request.form.get("NumMedia" , 0)) # gets me the number of media files in the message
-    from_number = request.form.get("From") # gets me the phone number of the sender
+    from_number = request.form.get("From", "")
+    to_number = request.form.get("To", "")
+    num_media = int(request.form.get("NumMedia", 0))
+    media_url = request.form.get("MediaUrl0", "")
+    text_body = request.form.get("Body", "")
 
-    resp = MessagingResponse() #
+    # Fire background processing so Twilio receives an instant 200 response
+    thread = threading.Thread(
+        target=process_message_async,
+        args=(from_number, to_number, num_media, media_url, text_body)
+    )
+    thread.start()
 
-
-
-    if num_media > 0:
-        media_url = request.form.get("MediaUrl0")
-        local_input_path = os.path.join(AUDIO_DIR, f"incoming_{sanitize(from_number)}.ogg")
-        download_twilio_media(media_url, local_input_path)
- 
-        wav_path = os.path.join(AUDIO_DIR, f"incoming_{sanitize(from_number)}.wav")
-        convert_to_wav(local_input_path, wav_path)
- 
-        transcript, detectedLanguage = sarvam_speech_to_text(wav_path)
-    else:
-        transcript = request.form.get("Body", "").strip()
-        detectedLanguage = detect_text_language(transcript)
-    print(f"Tranascript ({detectedLanguage}) : {transcript}")
-
-    # CONVERSATION STATE
-
-    session = convo.getSession(from_number)
-
-    if session is None:
-        session = convo.createSession(from_number , detectedLanguage)
-
-        greeting = "Hello! I'm here to help you find training and work opportunities that suit you."
-
-        question =convo.currentQuestion(session)
-        reply_text = f"{greeting} {question}"
-
-        send_reply(resp , reply_text , session["language"])
-        return str(resp)
-    # set state
-    if(session['state'] == convo.COLLECTING):
-        field_key = convo.currentField(session)
-        session["profile"][field_key] = transcript
-
-        if(convo.is_last_step(session)):
-            session["state"] = convo.CONFIRMING
-            reply_text = convo.profile_summary(session["profile"])
-
-        else:
-            convo.advance_step(session)
-            reply_text = convo.currentQuestion(session)
-        
-        send_reply(resp , reply_text , session["language"])
-        return str(resp)
-
-
-    if(session['state'] == convo.CONFIRMING):
-        if convo.is_confirmation(transcript):
-            session["state"] = convo.DONE
-            reply_text = get_recommendation_reply(session["profile"], session["language"])
-            send_reply(resp, reply_text, session["language"])
-            return str(resp)
-
-        edit_field = convo.edit_profile(transcript)
-        if edit_field: # if it exists
-            session["state"] = convo.EDITING_SINGLE
-            session["editing_field"] = edit_field
-            question = dict(convo.PROFILE_STEPS)[edit_field]
-
-            send_reply(resp , question , session["language"])
-            return str(resp)
-
-        reply_text = convo.profile_summary(session["profile"])
-        send_reply(resp, reply_text, session["language"])
-        return str(resp)
-    
-    if session["state"] == convo.EDITING_SINGLE:
-        field_key = session["editing_field"]
-        session["profile"][field_key] = transcript
-        session["state"] = convo.CONFIRMING
-        session["editing_field"] = None
-        reply_text = convo.profile_summary(session["profile"])
-        send_reply(resp , reply_text , session["language"])
-        return str(resp)
-
-    if session["state"] == convo.DONE:
-        if "restart" in transcript.lower():
-            convo.resetSession(from_number)
-            new_session = convo.createSession(from_number , detectedLanguage)
-            reply_text = "Sure , let's start over. " + convo.PROFILE_STEPS[0][1]
-            send_reply(resp , reply_text , new_session["language"])
-        else:
-            reply_text = "Your profile is already complete. Say 'restart' if you'd like to build a new one."
-            send_reply(resp , reply_text , session["language"])
-        return str(resp)
-
-    return str(resp)
+    # Instant empty response to satisfy Twilio's 15s window
+    return "", 200
     
     # Send one bot reply as BOTH voice note (in the user's language) and English text (always English, per the design decision).
 
-    # Convert the reccomendation text to audio
-def send_reply(resp: MessagingResponse, english_text: str, language_code: str):
+def send_whatsapp_reply(to_number: str, from_number: str, text: str, audio_public_url: str):
+    # 1. Send the text message first
+    twilio_client.messages.create(
+        body=text,
+        from_=from_number,
+        to=to_number
+    )
 
-    speech_text = translate_for_speech(english_text , language_code)
-    reply_wav_path = os.path.join(AUDIO_DIR, "reply.wav")
-    sarvam_text_to_speech(speech_text, language_code , reply_wav_path)
-
-    reply_audio_filename = "reply.mp3"
-    reply_audio_path = os.path.join(AUDIO_DIR, reply_audio_filename)
-    wav_to_mp3(reply_wav_path, reply_audio_path)
-
-    # Reply on WhatsApp with the voice note
-
-    reply_audio_public_url = f"{PUBLIC_BASE_URL}/audio/{reply_audio_filename}"
-    msg = resp.message(english_text)
-
-    msg.media(reply_audio_public_url)
+    # 2. Send the voice note as a separate media message
+    twilio_client.messages.create(
+        from_=from_number,
+        to=to_number,
+        media_url=[audio_public_url]
+    )
 
 
 
