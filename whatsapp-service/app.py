@@ -36,25 +36,18 @@ def whatsapp_webhook():
 
 
 
-    if num_media == 0:
-        resp.message("Please send a voice note describing your work and skills")
-        return str(resp)
-
-    media_url = request.form.get("MediaUrl0") # 
-    content_type = request.form.get("MediaContentType0") # gets me the content type of the media file
-
-    print(f"Received {content_type} from {from_number}: {media_url}")
-
-    local_input_path = os.path.join(AUDIO_DIR , f"incoming_{sanitize(from_number)}.ogg")
-
-    download_twilio_media(media_url , local_input_path)
-
-    # Convert to a format Sarvam accepts i.e the wav format
-
-    wav_path = os.path.join(AUDIO_DIR , f"incoming_{sanitize(from_number)}.wav")
-    convert_to_wav(local_input_path , wav_path)
-
-    transcript , detectedLanguage = sarvam_speech_to_text(wav_path) #  the audion is the input in sarvam supported format
+    if num_media > 0:
+        media_url = request.form.get("MediaUrl0")
+        local_input_path = os.path.join(AUDIO_DIR, f"incoming_{sanitize(from_number)}.ogg")
+        download_twilio_media(media_url, local_input_path)
+ 
+        wav_path = os.path.join(AUDIO_DIR, f"incoming_{sanitize(from_number)}.wav")
+        convert_to_wav(local_input_path, wav_path)
+ 
+        transcript, detected_lang = sarvam_speech_to_text(wav_path)
+    else:
+        transcript = request.form.get("Body", "").strip()
+        detected_lang = detect_text_language(transcript)
     print(f"Tranascript ({detectedLanguage}) : {transcript}")
 
     # CONVERSATION STATE
