@@ -1,13 +1,12 @@
 """
-
 Guided conversation state machine.
- 
+
 Each WhatsApp phone number gets its own "session" that tracks:
   - what language they're speaking (detected from their first message)
   - which profile question they're currently on
   - the answers collected so far
-
 """
+
 PROFILE_STEPS = [
     ("name", "What is your name?"),
     ("location", "Which village, town or district do you live in?"),
@@ -18,8 +17,6 @@ PROFILE_STEPS = [
     ("mobility", "Do you have any travel or physical constraints we should know about?"),
     ("employment_preference", "Would you prefer to start your own work, or work for someone else?"),
 ]
-# If the user wants to edit anything in their profile card , some reference aliases for each field 
-
 
 FIELD_ALIASES = {
     "name": ["name"],
@@ -32,68 +29,101 @@ FIELD_ALIASES = {
     "employment_preference": ["employment", "self employment", "job preference", "self-employed", "wage"],
 }
 
-# SESSION STATES
-
+# session states
 COLLECTING = "COLLECTING"
-CONFIRMING  = "CONFIRMING"
+CONFIRMING = "CONFIRMING"
 EDITING_SINGLE = "EDITING_SINGLE"
 DONE = "DONE"
 
+import json
+import sqlite3
 
-SESSION = {} # to store information
-
-def getSession(phone_no : str):
-  """
-    returns the existing conversation for this number , otherwise None if its a new conversation
-  """
-
-  return SESSION.get(phone_no)
-
-def createSession(phone_no : str , language_code : str):
-  """
-    Start a fresh session
-  """
-  session = {
-    "language": language_code,
-    "state": COLLECTING,
-    "step_index": 0,
-    "profile": {},
-    "editing_field": None,
-  }
-  SESSION[phone_no] = session
-  return session
+# Sessions are persisted to SQLite instead of a plain in-memory dict.
+DB_PATH = "sessions.db"
 
 
-def resetSession(phone_no : str):
-  SESSION.pop(phone_no , None)
+def _get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS sessions (
+            phone_number TEXT PRIMARY KEY,
+            session_json TEXT NOT NULL
+        )
+    """)
+    return conn
 
 
-def currentQuestion(session) -> str : 
+def get_session(phone_number: str):
+    """Returns the existing session for this number, or None if it's a
+    brand new conversation."""
+    conn = _get_db()
+    row = conn.execute(
+        "SELECT session_json FROM sessions WHERE phone_number = ?", (phone_number,)
+    ).fetchone()
+    conn.close()
+    return json.loads(row[0]) if row else None
 
-  field_key , question = PROFILE_STEPS[session["step_index"]]
-  return question
+
+def _save_session(phone_number: str, session: dict):
+    conn = _get_db()
+    conn.execute(
+        "INSERT OR REPLACE INTO sessions (phone_number, session_json) VALUES (?, ?)",
+        (phone_number, json.dumps(session)),
+    )
+    conn.commit()
+    conn.close()
 
 
+def create_session(phone_number: str, language_code: str):
+    """Starts a fresh profile-building session for a new user."""
+    session = {
+        "language": language_code,
+        "state": COLLECTING,
+        "step_index": 0,
+        "profile": {},
+        "editing_field": None,
+    }
+    _save_session(phone_number, session)
+    return session
 
 
-def currentField(session) -> str:
+def save_session(phone_number: str, session: dict):
+    """Call this after mutating a session dict in place (changing state,
+    advancing step_index, adding a profile answer, etc.) -- otherwise the
+    change only exists in memory for this request and is lost."""
+    _save_session(phone_number, session)
 
-  field_key, _ = PROFILE_STEPS[session["step_index"]]
-  return field_key
+
+def reset_session(phone_number: str):
+    conn = _get_db()
+    conn.execute("DELETE FROM sessions WHERE phone_number = ?", (phone_number,))
+    conn.commit()
+    conn.close()
+
+
+def current_question(session) -> str:
+    """The question text for whatever step the session is currently on."""
+    field_key, question = PROFILE_STEPS[session["step_index"]]
+    return question
+
+
+def current_field(session) -> str:
+    field_key, _ = PROFILE_STEPS[session["step_index"]]
+    return field_key
 
 
 def is_last_step(session) -> bool:
-  return session["step_index"] >= len(PROFILE_STEPS) - 1
+    return session["step_index"] >= len(PROFILE_STEPS) - 1
 
 
 def advance_step(session):
-  session["step_index"] += 1
+    session["step_index"] += 1
 
-def profile_summary(profile : dict) -> str:
-   """Human-readable summary shown/spoken back for confirmation."""
 
-   lines = ["Here is what is understood about you : "]
-   labels = {
+def build_profile_summary(profile: dict) -> str:
+    """Human-readable summary shown/spoken back for confirmation."""
+    lines = ["Here is what I understood about you:"]
+    labels = {
         "name": "Name",
         "location": "Location",
         "education": "Education",
@@ -102,16 +132,16 @@ def profile_summary(profile : dict) -> str:
         "skills_interest": "Skills/interests",
         "mobility": "Mobility",
         "employment_preference": "Preference",
-   } 
-
-   for field_key , _ in PROFILE_STEPS:
-      value = profile.get(field_key , "-")
-      lines.append(f"{labels[field_key]} : {value}")
-   lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
+    }
+    for field_key, _ in PROFILE_STEPS:
+        value = profile.get(field_key, "-")
+        lines.append(f"{labels[field_key]}: {value}")
+    lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
                   "field you want to change, e.g. 'edit location'.")
-   return "\n".join(lines)
+    return "\n".join(lines)
 
-def edit_profile(text: str):
+
+def match_edit_field(text: str):
     """Looks for an edit request like 'edit location' or 'change my name'
     in free-form text, returns the matching field_key or None."""
     text_lower = text.lower()
@@ -127,4 +157,3 @@ def edit_profile(text: str):
 def is_confirmation(text: str) -> bool:
     text_lower = text.lower().strip()
     return any(word in text_lower for word in ["confirm", "yes", "correct", "haan", "sahi"])
- 
