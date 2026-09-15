@@ -1,5 +1,4 @@
 """
-
 Guided conversation state machine.
  
 Each WhatsApp phone number gets its own "session" that tracks:
@@ -8,6 +7,13 @@ Each WhatsApp phone number gets its own "session" that tracks:
   - the answers collected so far
 
 """
+
+from datetime import datetime
+
+from sqlalchemy import DateTime, Integer, JSON, String, delete, func
+from sqlalchemy.orm import Mapped, mapped_column
+
+from database import Base, SessionLocal
 PROFILE_STEPS = [
     ("name", "What is your name?"),
     ("location", "Which village, town or district do you live in?"),
@@ -40,14 +46,44 @@ EDITING_SINGLE = "EDITING_SINGLE"
 DONE = "DONE"
 
 
-SESSION = {} # to store information
+
+class ConversationSession(Base):
+  __tablename__ = "conversation_sessions"
+
+  phone_number: Mapped[str] = mapped_column(String(32), primary_key=True)
+  language: Mapped[str] = mapped_column(String(16), nullable=False)
+  state: Mapped[str] = mapped_column(String(32), nullable=False)
+  step_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+  profile: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+  editing_field: Mapped[str | None] = mapped_column(String(64), nullable=True)
+  created_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True), nullable=False, server_default=func.now()
+  )
+  updated_at: Mapped[datetime] = mapped_column(
+    DateTime(timezone=True),
+    nullable=False,
+    server_default=func.now(),
+    onupdate=func.now(),
+  )
+
+
+def _session_dict(record: ConversationSession) -> dict:
+  return {
+    "language": record.language,
+    "state": record.state,
+    "step_index": record.step_index,
+    "profile": record.profile or {},
+    "editing_field": record.editing_field,
+  }
 
 def getSession(phone_no : str):
   """
     returns the existing conversation for this number , otherwise None if its a new conversation
   """
 
-  return SESSION.get(phone_no)
+  with SessionLocal() as db:
+    record = db.get(ConversationSession, phone_no)
+    return _session_dict(record) if record else None
 
 def createSession(phone_no : str , language_code : str):
   """
@@ -60,12 +96,48 @@ def createSession(phone_no : str , language_code : str):
     "profile": {},
     "editing_field": None,
   }
-  SESSION[phone_no] = session
-  return session
+  with SessionLocal() as db:
+    record = db.get(ConversationSession, phone_no)
+    if record is None:
+      record = ConversationSession(phone_number=phone_no)
+      db.add(record)
+
+    record.language = language_code
+    record.state = COLLECTING
+    record.step_index = 0
+    record.profile = {}
+    record.editing_field = None
+    db.commit()
+    db.refresh(record)
+    return _session_dict(record)
 
 
 def resetSession(phone_no : str):
-  SESSION.pop(phone_no , None)
+  with SessionLocal() as db:
+    db.execute(
+        delete(ConversationSession).where(
+            ConversationSession.phone_number == phone_no
+        )
+    )
+    db.commit()
+
+
+def saveSession(phone_no: str, session: dict):
+  """Persist changes made to an existing session dictionary."""
+  with SessionLocal() as db:
+    record = db.get(ConversationSession, phone_no)
+    if record is None:
+      record = ConversationSession(phone_number=phone_no)
+      db.add(record)
+
+    record.language = session["language"]
+    record.state = session["state"]
+    record.step_index = session["step_index"]
+    record.profile = dict(session["profile"])
+    record.editing_field = session["editing_field"]
+    db.commit()
+    db.refresh(record)
+    return _session_dict(record)
 
 
 def currentQuestion(session) -> str : 
