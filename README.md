@@ -9,7 +9,7 @@
 
 >3. ***USE CODE "join smooth-twelve" TO BE A PART OF THE SANDBOX***
 
-![alt text](image-1.png)
+![alt text](sandbox.png)
 >4. ***Text or say "hi" by sending a voice note in your own Native Indian Language***
 
 >5. ***Fill the required information with the help of guided conversation system either in text or voice note and finally confirm the details***
