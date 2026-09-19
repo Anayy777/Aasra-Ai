@@ -41,7 +41,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recommendation-service"))
-from app.nlu import client  
+from app.nlu import client  # reuse the already-configured Groq client
 
 # Sessions are persisted to SQLite instead of a plain in-memory dict.
 DB_PATH = "sessions.db"
@@ -139,9 +139,10 @@ def advance_step(session):
 
 
 def get_missing_fields(profile: dict) -> list:
-
+    """Deterministic check -- this is what actually guarantees every
+    PS-required field gets collected, regardless of how naturally or
+    unpredictably the conversation flows to get there."""
     return [f for f in REQUIRED_FIELDS if not profile.get(f)]
-
 def build_profile_summary(profile: dict) -> str:
     """Human-readable summary shown/spoken back for confirmation."""
     lines = ["Here is what I understood about you:"]
