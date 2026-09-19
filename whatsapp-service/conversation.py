@@ -215,6 +215,49 @@ about -- do not include null values, just leave the key out entirely.
         return profile
 
 
+
+def generate_natural_question(profile: dict, missing_fields: list) -> str:
+    """
+    Generates a warm, contextual next question -- referencing what's
+    already known where it makes sense -- instead of reading a fixed
+    script line. Falls back to the plain static question text if the
+    LLM call fails, so this can never break the conversation.
+    """
+    next_field = missing_fields[0]
+    fallback_question = dict(PROFILE_STEPS)[next_field]
+
+    try:
+        known_summary = ", ".join(f"{FIELD_LABELS[k]}: {v}" for k, v in profile.items() if v)
+        prompt = f"""You are a warm, empathetic assistant helping a
+government scheme beneficiary describe their background so you can
+recommend suitable skill training. Do not sound administrative or
+like a form.
+
+What you already know about them: {known_summary or "nothing yet"}
+
+You still need to find out about: {FIELD_LABELS[next_field]}
+
+Write ONE short, natural, friendly question (1 sentence) to ask them
+this next, in plain English. Do not greet them again if you already
+know their name. Do not explain why you're asking.
+"""
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[
+                {"role": "system", "content": "You write short, warm, natural conversational questions. Return only the question text, nothing else."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=60,
+        )
+        question = response.choices[0].message.content.strip().strip('"')
+        return question if question else fallback_question
+    except Exception as e:
+        print(f"Natural question generation failed ({e}), falling back to fixed question.")
+        return fallback_question
+
+
+
 def build_profile_summary(profile: dict) -> str:
     """Human-readable summary shown/spoken back for confirmation."""
     lines = ["Here is what I understood about you:"]
