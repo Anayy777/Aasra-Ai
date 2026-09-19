@@ -143,6 +143,78 @@ def get_missing_fields(profile: dict) -> list:
     PS-required field gets collected, regardless of how naturally or
     unpredictably the conversation flows to get there."""
     return [f for f in REQUIRED_FIELDS if not profile.get(f)]
+
+
+def extract_and_merge(profile: dict, transcript: str) -> dict:
+    """
+    THE CORE FIX: instead of blindly saving the transcript into whatever
+    field the fixed script happened to be on, this asks an LLM to pull
+    out ANY of our 8 profile fields present in what the person actually
+    said -- so someone who volunteers several things in one sentence
+    gets all of them captured, not just one.
+
+    Returns the merged profile. Only overwrites a field if the LLM found
+    new information for it -- never blanks out something already known,
+    even if this call fails or the model omits a field.
+    """
+    try:
+        prompt = f"""You are having a warm, natural conversation with a
+beneficiary of a government skilling scheme to understand their
+background. Extract ONLY the information that is EXPLICITLY present in
+their latest message below. Do not guess or invent anything.
+
+Fields to look for (use these exact keys):
+- name
+- location (village/town/district)
+- education (educational background)
+- family_occupation (their family's traditional work)
+- current_livelihood (what they currently do for work)
+- skills_interest (skills they have or want to learn)
+- mobility (travel/physical constraints)
+- employment_preference (self-employment vs. working for someone else)
+
+Already known about this person: {json.dumps(profile)}
+
+Their latest message: "{transcript}"
+
+Return ONLY a JSON object containing keys for fields you found NEW
+information for in this message. Omit any key you're not confident
+about -- do not include null values, just leave the key out entirely.
+"""
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[
+                {"role": "system", "content": "You extract structured facts from natural conversation. Return only valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
+            max_tokens=300,
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.replace("```json", "").replace("```", "").strip()
+        extracted = json.loads(raw)
+
+        updated_profile = dict(profile)
+        for field_key, value in extracted.items():
+            if field_key in REQUIRED_FIELDS and value:
+                updated_profile[field_key] = value
+        return updated_profile
+
+    except Exception as e:
+        print(f"LLM extraction failed ({e}), falling back to single-field capture.")
+        # FALLBACK: same behaviour as before this fix -- save the raw
+        # transcript to whichever field is currently "next" in the fixed
+        # order. This guarantees the conversation can never get stuck
+        # just because the LLM call had a bad moment.
+        missing = get_missing_fields(profile)
+        if missing:
+            updated_profile = dict(profile)
+            updated_profile[missing[0]] = transcript
+            return updated_profile
+        return profile
+
+
 def build_profile_summary(profile: dict) -> str:
     """Human-readable summary shown/spoken back for confirmation."""
     lines = ["Here is what I understood about you:"]
