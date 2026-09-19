@@ -37,9 +37,27 @@ DONE = "DONE"
 
 import json
 import sqlite3
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recommendation-service"))
+from app.nlu import client  
 
 # Sessions are persisted to SQLite instead of a plain in-memory dict.
 DB_PATH = "sessions.db"
+
+FIELD_LABELS = {
+    "name": "Name",
+    "location": "Location",
+    "education": "Education",
+    "family_occupation": "Family occupation",
+    "current_livelihood": "Current work",
+    "skills_interest": "Skills/interests",
+    "mobility": "Mobility",
+    "employment_preference": "Preference",
+}
+
+REQUIRED_FIELDS = [field_key for field_key, _ in PROFILE_STEPS]
 
 
 def _get_db():
@@ -120,22 +138,16 @@ def advance_step(session):
     session["step_index"] += 1
 
 
+def get_missing_fields(profile: dict) -> list:
+
+    return [f for f in REQUIRED_FIELDS if not profile.get(f)]
+
 def build_profile_summary(profile: dict) -> str:
     """Human-readable summary shown/spoken back for confirmation."""
     lines = ["Here is what I understood about you:"]
-    labels = {
-        "name": "Name",
-        "location": "Location",
-        "education": "Education",
-        "family_occupation": "Family occupation",
-        "current_livelihood": "Current work",
-        "skills_interest": "Skills/interests",
-        "mobility": "Mobility",
-        "employment_preference": "Preference",
-    }
     for field_key, _ in PROFILE_STEPS:
         value = profile.get(field_key, "-")
-        lines.append(f"{labels[field_key]}: {value}")
+        lines.append(f"{FIELD_LABELS[field_key]}: {value}")
     lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
                   "field you want to change, e.g. 'edit location'.")
     return "\n".join(lines)
