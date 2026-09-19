@@ -59,24 +59,24 @@ def whatsapp_webhook():
     session = convo.get_session(from_number)
 
     if session is None:
-        # Brand new user - greet them and ask the first question
+        # Brand new user - open with an invitation to talk freely
         session = convo.create_session(from_number, detected_lang)
-        greeting = "Hello! I'm here to help you find training and work opportunities that suit you."
-        question = convo.current_question(session)
-        reply_text = f"{greeting} {question}"
+        reply_text = ("Hello! I'm here to help you find training and work "
+                       "opportunities that suit you. Tell me a little about "
+                       "yourself -- your name, your work, and what you're "
+                       "hoping to learn.")
         send_reply(resp, reply_text, session["language"])
         return str(resp)
 
     if session["state"] == convo.COLLECTING:
-        field_key = convo.current_field(session)
-        session["profile"][field_key] = transcript
+        session["profile"] = convo.extract_and_merge(session["profile"], transcript)
+        missing = convo.get_missing_fields(session["profile"])
 
-        if convo.is_last_step(session):
+        if not missing:
             session["state"] = convo.CONFIRMING
             reply_text = convo.build_profile_summary(session["profile"])
         else:
-            convo.advance_step(session)
-            reply_text = convo.current_question(session)
+            reply_text = convo.generate_natural_question(session["profile"], missing)
 
         convo.save_session(from_number, session)  # persist the mutation above
         send_reply(resp, reply_text, session["language"])
