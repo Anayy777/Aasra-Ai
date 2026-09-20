@@ -100,6 +100,9 @@ def create_session(phone_number: str, language_code: str):
         "step_index": 0,
         "profile": {},
         "editing_field": None,
+        "last_asked_field": None,   # which field the last question targeted
+        "stuck_field": None,        # tracks repeated failure to fill the same field
+        "stuck_count": 0,
     }
     _save_session(phone_number, session)
     return session
@@ -145,23 +148,26 @@ def get_missing_fields(profile: dict) -> list:
     return [f for f in REQUIRED_FIELDS if not profile.get(f)]
 
 
-def extract_and_merge(profile: dict, transcript: str) -> dict:
+def extract_and_merge(profile: dict, transcript: str, last_asked_field: str = None) -> dict:
     """
-    THE CORE FIX: instead of blindly saving the transcript into whatever
-    field the fixed script happened to be on, this asks an LLM to pull
-    out ANY of our 8 profile fields present in what the person actually
-    said -- so someone who volunteers several things in one sentence
-    gets all of them captured, not just one.
+    Extracts any of our 8 profile fields present in the person's message.
 
-    Returns the merged profile. Only overwrites a field if the LLM found
-    new information for it -- never blanks out something already known,
-    even if this call fails or the model omits a field.
     """
     try:
+        context_hint = ""
+        if last_asked_field:
+            context_hint = (f"\nIMPORTANT CONTEXT: you just asked them about "
+                             f"'{FIELD_LABELS[last_asked_field]}'. If their message "
+                             f"is a short or direct answer to that (even just "
+                             f"'yes', 'no', 'haan', 'nahi', or a brief phrase), "
+                             f"attribute it to the '{last_asked_field}' field.")
+
         prompt = f"""You are having a warm, natural conversation with a
 beneficiary of a government skilling scheme to understand their
-background. Extract ONLY the information that is EXPLICITLY present in
-their latest message below. Do not guess or invent anything.
+background. Extract ONLY the information that is present in their
+latest message below -- including short direct answers to what you
+just asked them, not only detailed statements.
+{context_hint}
 
 Fields to look for (use these exact keys):
 - name
@@ -170,21 +176,21 @@ Fields to look for (use these exact keys):
 - family_occupation (their family's traditional work)
 - current_livelihood (what they currently do for work)
 - skills_interest (skills they have or want to learn)
-- mobility (travel/physical constraints)
+- mobility (travel/physical constraints, e.g. do they have a bike/vehicle, can they travel)
 - employment_preference (self-employment vs. working for someone else)
 
 Already known about this person: {json.dumps(profile)}
 
 Their latest message: "{transcript}"
 
-Return ONLY a JSON object containing keys for fields you found NEW
-information for in this message. Omit any key you're not confident
-about -- do not include null values, just leave the key out entirely.
+Return ONLY a JSON object containing keys for fields you found
+information for in this message. Omit a key only if the message truly
+gives no signal about it at all.
 """
         response = client.chat.completions.create(
             model="qwen/qwen3.8-27b",
             messages=[
-                {"role": "system", "content": "You extract structured facts from natural conversation. Return only valid JSON."},
+                {"role": "system", "content": "You extract structured facts from natural conversation, including short direct answers. Return only valid JSON."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0,
@@ -203,10 +209,6 @@ about -- do not include null values, just leave the key out entirely.
 
     except Exception as e:
         print(f"LLM extraction failed ({e}), falling back to single-field capture.")
-        # FALLBACK: same behaviour as before this fix -- save the raw
-        # transcript to whichever field is currently "next" in the fixed
-        # order. This guarantees the conversation can never get stuck
-        # just because the LLM call had a bad moment.
         missing = get_missing_fields(profile)
         if missing:
             updated_profile = dict(profile)
@@ -257,7 +259,13 @@ know their name. Do not explain why you're asking.
 
 
 def build_profile_summary(profile: dict) -> str:
-
+    """
+    Reflects back what was understood as warm, flowing prose -- NOT a
+    field:value record dump. The PS explicitly asks the interaction to
+    "feel empathetic and conversational rather than administrative,"
+    and reading back "Name: X / Location: Y" line by line is exactly
+    the kind of form-like experience that violates that.
+    """
     name = profile.get("name", "there")
     location = profile.get("location")
     education = profile.get("education")
