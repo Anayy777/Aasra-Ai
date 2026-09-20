@@ -215,7 +215,6 @@ about -- do not include null values, just leave the key out entirely.
         return profile
 
 
-
 def generate_natural_question(profile: dict, missing_fields: list) -> str:
     """
     Generates a warm, contextual next question -- referencing what's
@@ -257,16 +256,41 @@ know their name. Do not explain why you're asking.
         return fallback_question
 
 
-
 def build_profile_summary(profile: dict) -> str:
-    """Human-readable summary shown/spoken back for confirmation."""
-    lines = ["Here is what I understood about you:"]
-    for field_key, _ in PROFILE_STEPS:
-        value = profile.get(field_key, "-")
-        lines.append(f"{FIELD_LABELS[field_key]}: {value}")
-    lines.append("Reply 'confirm' if this is correct, or say 'edit' and the "
-                  "field you want to change, e.g. 'edit location'.")
-    return "\n".join(lines)
+
+    name = profile.get("name", "there")
+    location = profile.get("location")
+    education = profile.get("education")
+    family_occupation = profile.get("family_occupation")
+    current_livelihood = profile.get("current_livelihood")
+    skills_interest = profile.get("skills_interest")
+    mobility = profile.get("mobility")
+    employment_preference = profile.get("employment_preference")
+
+    parts = [f"So just to make sure I've got this right, {name} --"]
+
+    if location:
+        parts.append(f"you're based in {location}.")
+    if education:
+        parts.append(f"You've studied up to {education}.")
+    if family_occupation and current_livelihood:
+        parts.append(f"Your family has traditionally done {family_occupation}, "
+                      f"and right now you're doing {current_livelihood}.")
+    elif current_livelihood:
+        parts.append(f"Right now you're doing {current_livelihood}.")
+    elif family_occupation:
+        parts.append(f"Your family has traditionally done {family_occupation}.")
+    if skills_interest:
+        parts.append(f"You're skilled at, or interested in, {skills_interest}.")
+    if mobility:
+        parts.append(f"On travel -- {mobility}.")
+    if employment_preference:
+        parts.append(f"And you'd prefer {employment_preference}.")
+
+    summary = " ".join(parts)
+    summary += ("\n\nDid I get all of that right? If anything's off, just tell me "
+                "naturally what to fix -- like 'actually I'm from Indore, not Bhopal.'")
+    return summary
 
 
 def match_edit_field(text: str):
