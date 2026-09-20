@@ -74,14 +74,44 @@ def whatsapp_webhook():
         send_reply(resp, reply_text, session["language"])
         return str(resp)
 
+    session["language"] = detected_lang
+
     if session["state"] == convo.COLLECTING:
-        session["profile"] = convo.extract_and_merge(session["profile"], transcript)
+        last_asked = session.get("last_asked_field")
+        before_fields = set(session["profile"].keys())
+
+        session["profile"] = convo.extract_and_merge(
+            session["profile"], transcript, last_asked_field=last_asked
+        )
+
+        # SAFETY NET: if the field we specifically just asked about is
+        # STILL not filled after extraction, and we've already tried
+        # this same field before, force-accept the raw answer rather
+        # than asking again.
+        if last_asked and last_asked not in session["profile"]:
+            if session.get("stuck_field") == last_asked:
+                session["stuck_count"] = session.get("stuck_count", 0) + 1
+            else:
+                session["stuck_field"] = last_asked
+                session["stuck_count"] = 1
+
+            if session["stuck_count"] >= 2:
+                print(f"Force-accepting raw answer for '{last_asked}' after {session['stuck_count']} unclear attempts.")
+                session["profile"][last_asked] = transcript
+                session["stuck_field"] = None
+                session["stuck_count"] = 0
+        else:
+            session["stuck_field"] = None
+            session["stuck_count"] = 0
+
         missing = convo.get_missing_fields(session["profile"])
 
         if not missing:
             session["state"] = convo.CONFIRMING
+            session["last_asked_field"] = None
             reply_text = convo.build_profile_summary(session["profile"])
         else:
+            session["last_asked_field"] = missing[0]
             reply_text = convo.generate_natural_question(session["profile"], missing)
 
         convo.save_session(from_number, session)  # persist the mutation above
@@ -107,6 +137,7 @@ def whatsapp_webhook():
             return str(resp)
 
         # Didn't understand -- re-show the summary/instructions
+        convo.save_session(from_number, session)
         reply_text = convo.build_profile_summary(session["profile"])
         send_reply(resp, reply_text, session["language"])
         return str(resp)
@@ -127,6 +158,7 @@ def whatsapp_webhook():
             new_session = convo.create_session(from_number, detected_lang)
             send_reply(resp, OPENING_INVITATION, new_session["language"])
         else:
+            convo.save_session(from_number, session)
             reply_text = ("It looks like we've already been through this together! "
                            "If you'd like to go through it again, just say "
                            "'start over' and I'll ask everything fresh.")
@@ -294,6 +326,7 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
 # coordinates, then ranks courses and formats a reply.
 
 def generate_warm_recommendation_intro(name: str, profile: dict, recommendations: list) -> str:
+
     top = recommendations[0]
     title = top.get("qualification_title", "this training")
     sector = top.get("sector", "")
@@ -344,6 +377,7 @@ def get_recommendation_reply(profile: dict, language_code: str):
     )
 
     recommendations = result.get("recommendations", [])
+
     if recommendations:
         top = recommendations[0]
         title = top.get("qualification_title", "a suitable qualification")
