@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recommendation-
 
 from app.recommender import recommend_from_profile
 from app.normalizer import normalize_profile
+from app.nlu import client
 from profile_adapter import build_beneficiary_profile
 
 SARVAM_API_KEY = os.environ["SARVAM_API_KEY"]
@@ -27,6 +28,15 @@ PUBLIC_BASE_URL = os.environ["PUBLIC_BASE_URL"]
 app = Flask(__name__)
 AUDIO_DIR = "audio_files"
 os.makedirs(AUDIO_DIR, exist_ok=True)
+
+# Used both for a brand new user's first message AND when someone
+# restarts -- kept identical so restarting doesn't drop back into the
+# old scripted "What is your name?" opener while fresh sessions get the
+# warmer open-ended one. That mismatch was a real inconsistency before.
+OPENING_INVITATION = ("Hello! I'm here to help you find training and work "
+                       "opportunities that suit you. Tell me a little about "
+                       "yourself -- your name, your work, and what you're "
+                       "hoping to learn.")
 
 
 
@@ -59,12 +69,8 @@ def whatsapp_webhook():
     session = convo.get_session(from_number)
 
     if session is None:
-        # Brand new user - open with an invitation to talk freely
         session = convo.create_session(from_number, detected_lang)
-        reply_text = ("Hello! I'm here to help you find training and work "
-                       "opportunities that suit you. Tell me a little about "
-                       "yourself -- your name, your work, and what you're "
-                       "hoping to learn.")
+        reply_text = OPENING_INVITATION
         send_reply(resp, reply_text, session["language"])
         return str(resp)
 
@@ -116,13 +122,14 @@ def whatsapp_webhook():
         return str(resp)
 
     if session["state"] == convo.DONE:
-        if "restart" in transcript.lower():
+        if "restart" in transcript.lower() or "start over" in transcript.lower():
             convo.reset_session(from_number)
             new_session = convo.create_session(from_number, detected_lang)
-            reply_text = "Sure, let's start over. " + convo.PROFILE_STEPS[0][1]
-            send_reply(resp, reply_text, new_session["language"])
+            send_reply(resp, OPENING_INVITATION, new_session["language"])
         else:
-            reply_text = "Your profile is already complete. Say 'restart' if you'd like to build a new one."
+            reply_text = ("It looks like we've already been through this together! "
+                           "If you'd like to go through it again, just say "
+                           "'start over' and I'll ask everything fresh.")
             send_reply(resp, reply_text, session["language"])
         return str(resp)
 
@@ -286,6 +293,41 @@ def sarvam_text_to_speech(text: str, language_code: str, save_path: str):
 # schema the recommender expects, geocodes the stated location into
 # coordinates, then ranks courses and formats a reply.
 
+def generate_warm_recommendation_intro(name: str, profile: dict, recommendations: list) -> str:
+    top = recommendations[0]
+    title = top.get("qualification_title", "this training")
+    sector = top.get("sector", "")
+    occupation = profile.get("current_livelihood") or profile.get("family_occupation") or ""
+
+    fallback = (f"Thanks {name}! Based on what you told me, I think {title} "
+                f"could be a great fit for you -- it builds on the work you "
+                f"already know. I've shared the full details below.")
+
+    try:
+        prompt = f"""A beneficiary named {name} currently does: "{occupation}".
+Their top recommended training is "{title}" in the {sector} sector.
+
+Write a short, warm 2-sentence explanation of why this recommendation
+makes sense for them, in plain everyday language -- no jargon like
+"NSQF level" or "match percentage". Sound like a caring person
+explaining a good opportunity, not a report.
+"""
+        response = client.chat.completions.create(
+            model="qwen/qwen3.8-27b",
+            messages=[
+                {"role": "system", "content": "You write warm, plain-language explanations, never technical jargon."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=120,
+        )
+        text = response.choices[0].message.content.strip()
+        return f"Thanks {name}! {text}" if text else fallback
+    except Exception as e:
+        print(f"Warm recommendation intro failed ({e}), falling back to template.")
+        return fallback
+
+
 def get_recommendation_reply(profile: dict, language_code: str):
 
     name = profile.get("name", "there")
@@ -301,19 +343,29 @@ def get_recommendation_reply(profile: dict, language_code: str):
         language_code="en-IN",
     )
 
-    full_text = f"Thanks {name}!\n{result['reply']}"
-
     recommendations = result.get("recommendations", [])
     if recommendations:
         top = recommendations[0]
         title = top.get("qualification_title", "a suitable qualification")
+
+        warm_intro = generate_warm_recommendation_intro(name, profile, recommendations)
+        # Technical detail kept as a labeled reference block AFTER the warm
+        # explanation, not instead of it -- still useful for anyone (a
+        # field officer, or the beneficiary themself) who wants the exact
+        # facts, without that being the only thing the message says.
+        full_text = f"{warm_intro}\n\nFor your reference:\n{result['reply']}"
+
         voice_summary = (
-            f"Thanks {name}! Your top recommendation is {title}, "
-            f"with a {top.get('final_score', 0) * 100:.0f} percent match. "
-            f"I've sent the full list with {len(recommendations)} options as a text message."
+            f"Thanks {name}! I think {title} could really work well for you, "
+            f"based on what you've told me. I've sent more details, and a "
+            f"couple of other options, as a text message."
         )
     else:
-        voice_summary = f"Thanks {name}! I couldn't find a strong match right now -- check the text message for details."
+        full_text = (f"Thanks {name}! I wasn't able to find a strong match just yet "
+                     f"based on what you've shared -- but don't worry, we can look "
+                     f"again together. Feel free to tell me more about your skills "
+                     f"or interests.")
+        voice_summary = full_text
 
     return full_text, voice_summary
 
