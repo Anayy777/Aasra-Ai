@@ -96,6 +96,19 @@ def format_recommendation_reply(
                 f"{progression_pathway}"
             )
 
+        options = qualification.get("training_options", [])
+        if options:
+            option = options[0]
+            lines.append(
+                f"   Verified batch: {option['centre_name']} ({option['district']}, "
+                f"{option['state']}), starts {option['start_date'] or 'date to confirm'}"
+            )
+            if option["distance_km"] is not None:
+                lines.append(f"   Distance: {option['distance_km']} km")
+            if option["accessibility"] == "unverified":
+                lines.append("   Accessibility: confirm with the centre")
+            if option["enrollment_url"]:
+                lines.append(f"   Apply: {option['enrollment_url']}")
         lines.append("")
 
     return "\n".join(lines)

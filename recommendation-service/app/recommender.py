@@ -3,6 +3,7 @@ from app.normalizer import normalize_profile
 from app.nqr_loader import load_nqr_qualifications
 from app.nqr_ranker import rank_qualifications
 from app.response_formatter import format_recommendation_reply
+from app.training_offerings import load_training_offerings, match_training_offerings
 
 
 def recommend_from_profile(
@@ -41,6 +42,8 @@ def recommend_from_profile(
         qualifications=qualifications,
         top_k=top_k,
     )
+
+    offerings = load_training_offerings()
 
     # Step 3: Convert ranked Qualification objects
     # into API-friendly dictionaries.
@@ -86,6 +89,10 @@ def recommend_from_profile(
             "final_score": (
                 item["final_score"]
             ),
+            "training_options": match_training_offerings(
+                profile, qualification.qualification_id, offerings,
+                latitude=user_latitude, longitude=user_longitude,
+            ),
         }
 
         recommendations.append(
@@ -95,6 +102,10 @@ def recommend_from_profile(
     result = {
         "profile": profile.model_dump(),
         "recommendations": recommendations,
+        "training_availability": (
+            "verified_options_available" if any(r["training_options"] for r in recommendations)
+            else "unverified"
+        ),
     }
 
     # Step 4: Generate human-readable response.

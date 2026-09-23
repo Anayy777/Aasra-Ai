@@ -9,7 +9,7 @@ Each WhatsApp phone number gets its own "session" that tracks:
 
 PROFILE_STEPS = [
     ("name", "What is your name?"),
-    ("location", "Which village, town or district do you live in?"),
+    ("location", "Which village or town and district do you live in?"),
     ("education", "What is your educational background?"),
     ("family_occupation", "What work does your family traditionally do?"),
     ("current_livelihood", "What do you currently do for work, if anything?"),
