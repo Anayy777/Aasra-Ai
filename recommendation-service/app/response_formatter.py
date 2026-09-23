@@ -107,8 +107,22 @@ def format_recommendation_reply(
                 lines.append(f"   Distance: {option['distance_km']} km")
             if option["accessibility"] == "unverified":
                 lines.append("   Accessibility: confirm with the centre")
+            if option["batch_id"]:
+                lines.append(f"   Batch ID: {option['batch_id']}")
             if option["enrollment_url"]:
-                lines.append(f"   Apply: {option['enrollment_url']}")
+                lines.append(
+                    f"   Batch link (sign in and complete e-KYC first if needed): "
+                    f"{option['enrollment_url']}"
+                )
+        else:
+            lines.append("   No verified local training batch is listed yet.")
         lines.append("")
 
+    lines.extend([
+        "To look for a PMKVY training batch, open Skill India Digital: "
+        "https://www.skillindiadigital.gov.in/home",
+        "Register if you are new, or log in. Complete e-KYC if it is pending. "
+        "Then search the recommended job role, check the scheme and batch ID, "
+        "and submit your interest. The centre must approve it before enrollment.",
+    ])
     return "\n".join(lines)

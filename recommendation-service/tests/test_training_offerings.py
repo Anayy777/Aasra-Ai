@@ -1,9 +1,10 @@
 from datetime import date, timedelta
 
 from app.models import BeneficiaryProfile, Mobility
-from app.training_offerings import match_training_offerings
+from app.training_offerings import load_training_offerings, match_training_offerings
 from app.nqr_loader import load_nqr_qualifications
 from app.recommender import recommend_from_profile
+from app.response_formatter import format_recommendation_reply
 
 
 def test_offering_respects_distance_preference_access_and_freshness():
@@ -70,3 +71,17 @@ def test_recommender_attaches_verified_batch(monkeypatch):
     result = recommend_from_profile(BeneficiaryProfile(location="Indore"), top_k=1)
     assert result["training_availability"] == "verified_options_available"
     assert result["recommendations"][0]["training_options"][0]["batch_id"] == "B1"
+    assert "Batch ID: B1" in result["reply"]
+    assert "Register if you are new, or log in" in result["reply"]
+    assert "Complete e-KYC if it is pending" in result["reply"]
+
+
+def test_empty_catalogue_does_not_imply_an_available_batch():
+    assert load_training_offerings() == []
+    reply = format_recommendation_reply({
+        "recommendations": [{
+            "qualification_title": "Example qualification", "training_options": [],
+        }],
+    })
+    assert "No verified local training batch is listed yet" in reply
+    assert "https://www.skillindiadigital.gov.in/home" in reply

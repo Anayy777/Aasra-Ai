@@ -290,7 +290,7 @@ def build_profile_summary(profile: dict) -> str:
 
     summary = " ".join(parts)
     summary += ("\n\nDid I get all of that right? If anything's off, just tell me "
-                "naturally what to fix -- like 'actually I'm from Indore, not Bhopal.'")
+                "naturally what to fix -- like 'actually I'm from Mumbai, not Delhi.'")
     return summary
 
 

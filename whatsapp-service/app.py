@@ -392,7 +392,8 @@ def get_recommendation_reply(profile: dict, language_code: str):
         voice_summary = (
             f"Thanks {name}! I think {title} could really work well for you, "
             f"based on what you've told me. I've sent more details, and a "
-            f"couple of other options, as a text message."
+            f"couple of other options, as a text message. The text explains "
+            f"registration and e-KYC for Skill India batches, if needed."
         )
     else:
         full_text = (f"Thanks {name}! I wasn't able to find a strong match just yet "
