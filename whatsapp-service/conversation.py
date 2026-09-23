@@ -259,13 +259,6 @@ know their name. Do not explain why you're asking.
 
 
 def build_profile_summary(profile: dict) -> str:
-    """
-    Reflects back what was understood as warm, flowing prose -- NOT a
-    field:value record dump. The PS explicitly asks the interaction to
-    "feel empathetic and conversational rather than administrative,"
-    and reading back "Name: X / Location: Y" line by line is exactly
-    the kind of form-like experience that violates that.
-    """
     name = profile.get("name", "there")
     location = profile.get("location")
     education = profile.get("education")
