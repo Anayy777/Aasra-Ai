@@ -61,10 +61,6 @@ The dataset does not contain a dedicated minimum-education requirement for every
 
 The catalogue currently has **14 course listings across four Delhi government ITIs**, covering electrician, fitter, sewing, welder and plumber trades. They are related local options, not verified open batches for the exact recommended NQR qualifications. Similar trade names in the workbook include instructor qualifications, so these ITI learner courses deliberately have no exact NQR ID assigned.
 
-Listings stop appearing after 30 days unless reviewed again. Without coordinates, a user's location must match the listed district or state. The WhatsApp flow currently supplies no coordinates, so distance from the user is unverified.
-
-See [the training catalogue guide](recommendation-service/TRAINING_OFFERS.md) before adding providers. A listing needs a checked source; an open batch also needs its exact qualification and batch details. The bot does not log users into admissions portals, complete e-KYC or enroll them. Those steps happen through the relevant provider or scheme portal.
-
 ## Run the WhatsApp bot locally
 
 You need Python **3.14** and `uv` for the root project, FFmpeg for audio conversion, Twilio Sandbox credentials, and Sarvam and Groq API keys. You also need a public HTTPS tunnel, such as ngrok, so Twilio can reach your local server.
@@ -74,8 +70,6 @@ From the repository root:
 ```bash
 uv sync
 ```
-
-Install FFmpeg if needed: `brew install ffmpeg` on macOS, or `sudo apt install ffmpeg` on Ubuntu/Debian.
 
 Create a root `.env` using `.env.example` as a starting point. Edit an existing file instead of overwriting it. It needs:
 
@@ -146,30 +140,7 @@ The response includes the profile, ranked qualifications, exact training matches
 | `recommendation-service/data/` | NQR workbook and training catalogue. |
 | `web-app/` | Next.js starter scaffold; the user and admin dashboards are not connected yet. |
 
-To preview the web scaffold, run `npm ci` and `npm run dev` from `web-app/`, then open `http://localhost:3000`.
-
-## Checks and common problems
-
-From `recommendation-service/`, using the environment above:
-
-```bash
-.venv/bin/python -m pytest tests -q \
-  --deselect=tests/test_full_system.py::test_conversation_flow \
-  --deselect=tests/test_full_system.py::test_api_recommendation_endpoint
-```
-
-These checks exercise local recommendation behavior without calling Groq. A `GROQ_API_KEY` value is still required at import time; a placeholder works for these local checks. Run `.venv/bin/python -m pytest tests -q` with a working key and network access to include the two live API tests. They do not verify WhatsApp delivery or Sarvam audio.
-
-| Problem | What to check |
-| --- | --- |
-| WhatsApp does not reply | Sandbox membership, the running Flask server, and the current tunnel's `/webhook` URL using POST. |
-| Audio conversion fails | Run `ffmpeg -version` to check the installation. |
-| Reply audio cannot be fetched | Check `PUBLIC_BASE_URL` and public access to `/audio/reply.mp3`. |
-| Groq or Sarvam returns an error | Check server output, credentials, account access to the model named in the code, and service limits. |
-| No local centre appears | Check the catalogue's location, trade and `verified_at` fields. Old or unmatched rows are filtered out. |
-| An old conversation resumes | Sessions survive restarts. After recommendations, send `start over`. |
-
-When started as above, the bot stores sessions in `whatsapp-service/sessions.db` and audio in `whatsapp-service/audio_files/`. These contain conversation data and should stay out of commits.
+To preview the web , run `npm run dev` from `web-app/`, then open `http://localhost:3000`.
 
 ## What we still need to finish
 
