@@ -9,7 +9,7 @@ Each WhatsApp phone number gets its own "session" that tracks:
 
 PROFILE_STEPS = [
     ("name", "What is your name?"),
-    ("location", "Which village, town or district do you live in?"),
+    ("location", "Which village or town and district do you live in?"),
     ("education", "What is your educational background?"),
     ("family_occupation", "What work does your family traditionally do?"),
     ("current_livelihood", "What do you currently do for work, if anything?"),
@@ -290,7 +290,7 @@ def build_profile_summary(profile: dict) -> str:
 
     summary = " ".join(parts)
     summary += ("\n\nDid I get all of that right? If anything's off, just tell me "
-                "naturally what to fix -- like 'actually I'm from Indore, not Bhopal.'")
+                "naturally what to fix -- like 'actually I'm from Mumbai, not Delhi.'")
     return summary
 
 

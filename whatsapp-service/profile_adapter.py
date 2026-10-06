@@ -48,13 +48,20 @@ Text: "{skills_text}"
 
 def _extract_max_distance_km(mobility_text: str):
     if not mobility_text:
-        return 25.0
+        return None
     match = re.search(r"(\d+)\s*(km|kilometer|kilometre)", mobility_text.lower())
     if match:
         return float(match.group(1))
-    if any(p in mobility_text.lower() for p in ["no constraint", "can travel", "anywhere", "koi dikkat nahi"]):
-        return 50.0
-    return 25.0
+    return None
+
+
+def _extract_physical_constraints(mobility_text: str):
+    """Keep an explicitly mentioned access need for centre-level matching."""
+    if not mobility_text:
+        return None
+    text = mobility_text.lower()
+    access_terms = ("wheelchair", "disability", "disabled", "difficulty walking", "cannot walk", "can't walk", "limited mobility", "hearing impairment", "visual impairment", "blind", "divyang")
+    return mobility_text.strip() if any(term in text for term in access_terms) else None
 
 
 def _extract_employment_preference(text: str):
@@ -95,7 +102,10 @@ def build_beneficiary_profile(raw_profile: dict) -> BeneficiaryProfile:
         occupation=occupation_text,
         skills=_extract_skills_list(raw_profile.get("skills_interest", "")),
         location=(raw_profile.get("location") or "").strip() or None,
-        mobility=Mobility(max_distance_km=_extract_max_distance_km(raw_profile.get("mobility", ""))),
+        mobility=Mobility(
+            max_distance_km=_extract_max_distance_km(raw_profile.get("mobility", "")),
+            physical_constraints=_extract_physical_constraints(raw_profile.get("mobility", "")),
+        ),
         employment_preference=_extract_employment_preference(raw_profile.get("employment_preference", "")),
         language_code=raw_profile.get("language_code"),
         special_categories=[],  # not currently collected by our guided flow

@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class Mobility(BaseModel):
     max_distance_km: Optional[float] = None
+    physical_constraints: Optional[str] = None
 
 
 class BeneficiaryProfile(BaseModel):
